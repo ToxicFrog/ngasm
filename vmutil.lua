@@ -26,7 +26,7 @@ function vmutil.string_to_words(str)
   local words = {}
   local ptr = 0
   for i=1,#str,2 do
-    local high,low = string.byte(str, i, i+1)
+    local high,low = str:byte(i, i+1)
     words[ptr] = high*0x100 + low
   end
   return words
@@ -39,11 +39,17 @@ end
 
 -- Turn an opcode into a human-readable string
 local function op_to_str(op)
+  if not op.ci then
+    return string.format('%04X [A=%d]', op.opcode, op.opcode)
+  end
+
   local alu = {[0] = '&', '|', '^', '~', '+', '++', '-', '--'}
+  local jmp = {'JGT', 'JEQ', 'JGE', 'JLT', 'JNE', 'JLE', 'JMP'}
   local s = { 'alu:'..alu[op.alu] }
-  for _,field in ipairs { 'ci', 'mr', 'zx', 'sw', 'a', 'd', 'm', 'lt', 'eq', 'gt' } do
+  for _,field in ipairs { 'mr', 'zx', 'sw', 'a', 'd', 'm' } do
     if op[field] == true then table.insert(s, field) end
   end
+  table.insert(s, jmp[(op.lt and 4 or 0) + (op.eq and 2 or 0) + (op.gt and 1 or 0)])
   return string.format("%04X [%s]", op.opcode, table.concat(s, " "))
 end
 

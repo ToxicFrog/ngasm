@@ -78,7 +78,6 @@ function vm:step()
   else
     -- If a compute instruction, hand off to the more complicated instruction
     -- dispatch function.
-    print(op)
     self:dispatch(op)
   end
 
@@ -113,11 +112,12 @@ end
 -- Output the VM state as a human-readable string, for debugging. Will be called
 -- automatically by print(), tostring(), etc.
 function vm:__tostring()
-  return table.concat({
-    string.format("D:%04X  A:%04X  IR:%04X  PC:%04X", self.D, self.A, self.IR, self.PC);
-    string.format("       *A:%04X IR':%04X CLK:%04X", self:ram_read(self.A), self.rom[self.PC] or 0xFFFF, self.CLK);
-    string.format(" RAM: %d bytes  ROM: %d bytes", #self.ram, #self.rom+1);
-  }, "\n")
+  -- we use self.ram here rather than ram_read() because if A is pointing to
+  -- an MMIO device we don't want to actuate it while printing the VM state!
+  return string.format("VM (CLK:%04X D:%04X A:%04X MEM:%04X PC:%04X IR:%s NEXT:%s)",
+    self.CLK, self.D, self.A, self.ram[self.A], self.PC,
+    vmutil.decode(self.IR),
+    self.rom[self.PC] and vmutil.decode(self.rom[self.PC]) or '----')
 end
 
 -- Read RAM at the given address. This might return actual memory contents
