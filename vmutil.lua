@@ -1,0 +1,91 @@
+local bit = require 'bit'
+
+local vmutil = {}
+
+-- Return a table where every entry in the range [from,to) is set to val.
+-- This is generally used to set RAM, which means that from is typically 0, not
+-- 1 as is normal for arrays in lua.
+function vmutil.fill(val, from, to)
+  local t = {}
+  for i=from,to-1 do
+    t[i] = val
+  end
+  return t
+end
+
+-- Reopen an IO channel. If fd is set, close it. If filename is set, open it
+-- with the given mode and return the new fd, else return nil.
+function vmutil.reopen(fd, filename, mode)
+  if fd then fd:close() end
+  if filename then return assert(io.open(filename, mode)) end
+end
+
+-- Turn a string into a table of 16-bit words, STARTING AT 0, suitable for
+-- initializing RAM or ROM from.
+function vmutil.string_to_words(str)
+  local words = {}
+  local ptr = 0
+  for i=1,#str,2 do
+    local high,low = string.byte(str, i, i+1)
+    words[ptr] = high*0x100 + low
+  end
+  return words
+end
+
+-- return true if the given bit is set in the given number.
+local function isset(n, bit_index)
+  return bit.band(n, 2^bit_index) ~= 0
+end
+
+-- Turn an opcode into a human-readable string
+local function op_to_str(op)
+  local alu = {[0] = '&', '|', '^', '~', '+', '++', '-', '--'}
+  local s = { 'alu:'..alu[op.alu] }
+  for _,field in ipairs { 'ci', 'mr', 'zx', 'sw', 'a', 'd', 'm', 'lt', 'eq', 'gt' } do
+    if op[field] == true then table.insert(s, field) end
+  end
+  return string.format("%04X [%s]", op.opcode, table.concat(s, " "))
+end
+
+local alu_ops = {
+  [0] = bit.band;
+  [1] = bit.bor;
+  [2] = bit.bxor;
+  [3] = bit.bnot;
+  [4] = function(x,y) return x+y end;
+  [5] = function(x,_) return x+1 end;
+  [6] = function(x,y) return x-y end;
+  [7] = function(x,y) return x-1 end;
+}
+
+-- turn a 16-bit opcode stored as a number into a bunch of named bits
+-- 'alu' field is a number 0-7 indexing the above table; 'alu_fn' is the
+-- actual function to be called.
+function vmutil.decode(opcode)
+  local alu = bit.rshift(bit.band(opcode, 0x0700), 8);
+  local op = {
+    opcode = opcode;
+    ci = isset(opcode, 0xF); -- compute instruction (if unset, load immediate)
+    -- bits E and D unused
+    mr = isset(opcode, 0xC); -- memory read
+    -- bit B unused
+    -- bits u, op1, and op0 we condense into a single number in the range 0-7
+    -- to select the ALU operation
+    alu = alu;
+    alu_fn = alu_ops[alu];
+    --u = isset(opcode, 0xA);
+    --op1 = isset(opcode, 0x9);
+    --op0 = isset(opcode, 0x8);
+    zx = isset(opcode, 0x7); -- zero first operand to ALU
+    sw = isset(opcode, 0x6); -- swap ALU operands before zeroing
+    a  = isset(opcode, 0x5); -- write A
+    d  = isset(opcode, 0x4); -- write D
+    m  = isset(opcode, 0x3); -- write memory
+    lt = isset(opcode, 0x2); -- jump if less than
+    eq = isset(opcode, 0x1); -- jump if equal
+    gt = isset(opcode, 0x0); -- jump if greater than
+  }
+  return setmetatable(op, {__tostring = op_to_str})
+end
+
+return vmutil
