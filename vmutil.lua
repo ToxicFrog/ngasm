@@ -94,4 +94,12 @@ function vmutil.decode(opcode)
   return setmetatable(op, {__tostring = op_to_str})
 end
 
+function vmutil.find_mmio(devs, address)
+  for base,dev in pairs(devs) do
+    if address >= base and address < (base + dev:size()) then
+      return dev, address-base
+    end
+  end
+end
+
 return vmutil

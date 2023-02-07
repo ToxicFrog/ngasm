@@ -18,9 +18,8 @@ function vm.new()
     -- contents.
     ram = {};
     rom = {};
-    -- stream IO connections
-    infile = nil; outfile = nil; -- names of files on disk
-    stdin = nil; stdout = nil; -- actual file handles
+    -- peripherals
+    dev = {};
   }
 
   setmetatable(new_vm, vm)
@@ -34,6 +33,9 @@ function vm:reset()
   self.ram = vmutil.fill(0, 0, 2^15)
   self.stdin = vmutil.reopen(self.stdin, self.infile, 'rb')
   self.stdout = vmutil.reopen(self.stdout, self.outfile, 'wb')
+  for _,dev in pairs(self.dev) do
+    dev:reset()
+  end
   return self
 end
 
@@ -130,13 +132,49 @@ end
 -- Read RAM at the given address. This might return actual memory contents
 -- or it might return some sort of memory mapped IO.
 function vm:ram_read(address)
+  local dev,devaddr = vmutil.find_mmio(self.dev, address)
+  if dev then
+    return dev:read(devaddr)
+  end
   return self.ram[address]
 end
 
 -- Write to RAM at the given address. As with ram_read this might store something
 -- in ram or it might do memory mapped IO.
 function vm:ram_write(address, word)
+  local dev,devaddr = vmutil.find_mmio(self.dev, address)
+  if dev then
+    dev:write(devaddr, word)
+  end
   self.ram[address] = word
+end
+
+-- Attach a peripheral to memory-mapped IO. All memory reads and writes in the
+-- range [base, base+dev:size()) will be redirected to it, calling
+-- dev:write(addr-base) and dev:read(addr-base).
+-- Trying to attach multiple devices to the same address is an error; detach
+-- the original device first.
+function vm:attach(base, dev)
+  local eof = base + dev:size()-1
+  -- check attachments
+  for old_base,old_dev in pairs(self.dev) do
+    local old_eof = old_base + old_dev:size()-1
+    assert(base > old_eof or eof < old_base,
+      string.format(
+        "Attempt to attach overlapping peripherals: %s [%04X-%04X] vs. %s [%04X-%04X]",
+        old_dev, old_base, old_eof, dev, base, eof))
+  end
+  self.dev[base] = dev
+  dev:attach()
+  return self
+end
+
+-- Detach the peripheral at the given address.
+function vm:detach(base)
+  assert(self.dev[base], string.format("Attempt to detach nonexistent device at address %04X", base))
+  self.dev[base]:detach()
+  self.dev[base] = nil
+  return self
 end
 
 -- end of library
