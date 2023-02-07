@@ -51,14 +51,21 @@ end
 
 -- Run n steps of the VM. If n is omitted, run until program completion.
 function vm:run(n)
+  return vm:trace(n, function() end)
+end
+
+function vm:trace(n, fn)
+  fn = fn or print
   n = n or math.huge
   for i=1,n do
+    fn(self)
     self:step()
     if not self.rom[self.PC] then
       -- no more program code!
       break
     end
   end
+  fn(self)
   return self
 end
 
