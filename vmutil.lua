@@ -28,6 +28,7 @@ function vmutil.string_to_words(str)
   for i=1,#str,2 do
     local high,low = str:byte(i, i+1)
     words[ptr] = high*0x100 + low
+    ptr = ptr+1
   end
   return words
 end

@@ -53,7 +53,7 @@ end
 
 -- Run n steps of the VM. If n is omitted, run until program completion.
 function vm:run(n)
-  return vm:trace(n, function() end)
+  return self:trace(n, function() end)
 end
 
 function vm:trace(n, fn)
@@ -103,7 +103,7 @@ function vm:dispatch(op)
   local X, Y = self.D, self.A
   -- It's important to handle these in order -- memory read first, then swap,
   -- then zero X.
-  if op.mr then Y = self:ram_read(cpu.A) end
+  if op.mr then Y = self:ram_read(self.A) end
   if op.sw then X,Y = Y,X end
   if op.zx then X = 0 end
   -- compute result
