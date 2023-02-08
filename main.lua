@@ -2,6 +2,13 @@ local vm = require "vm"
 local iostream = require "iostream"
 
 local CPU = vm.new()
+local ngasm = io.open('ngasm.bin', 'rb'):read('*a')
+CPU:attach(0x7FF0, iostream.new('test.asm', 'rb'))
+CPU:attach(0x7FF8, iostream.new('test.bin', 'wb'))
+CPU:flash(ngasm)
+CPU:run()
+do return end
+
 CPU:flash {
   [0] =
   0b1000000010010000,
