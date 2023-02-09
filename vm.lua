@@ -60,14 +60,13 @@ function vm:trace(n, fn)
   fn = fn or print
   n = n or math.huge
   for i=1,n do
-    fn(self)
-    self:step()
     if not self.rom[self.PC] then
       -- no more program code!
       break
     end
+    self:step()
+    fn(self)
   end
-  fn(self)
   return self
 end
 
