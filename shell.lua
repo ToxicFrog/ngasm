@@ -1,10 +1,13 @@
 --[[
-baseline commands we absolutely need:
-  flash in out reset run exit
-useful debugging commands:
-  peek poke list where break trace watch step
-fancy stuff:
-  screen
+Commands to be implemented:
+  peek <range> -- display memory at range
+  poke <addr> <value> -- write value to memory
+  poke <register> <value> -- write value to register
+  list <range> -- disassemble ROM
+  where -- display machine state and disassemble code around PC and RAM around A
+  break <addr> -- add breakpoint at ROM address
+  watch <addr> -- add watchpoint at RAM address
+  screen <addr> <w> <h> -- attach raster display
 ]]
 local vm = require "vm"
 

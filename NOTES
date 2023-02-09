@@ -1,0 +1,35 @@
+There is, I think, a general form of the assembler state engine, where most states
+are a pointer to a region of memory that contains a bunch of structs of the
+form:
+
+  struct {
+    uint16_t char;
+    uint16_t bits;
+    uint16_t next_state;
+  }
+
+Ending with one containing { 0, 0, 0 }.
+
+This works for any state of the form "read a character, or in some bits and move
+to another state based on it", which is most of them.
+
+So that would make the state engine something like:
+- get pointer to start of state block
+- deref into D
+- jeq error
+- read char, compare
+- jeq setbits
+- advance pointer 3 and loop
+- setbits:
+- advance ptr
+- deref bits into D
+- | into opcode
+- adv ptr
+- deref into state
+- return to mainloop
+
+and would let us replace the Destination, LHS, RHS, and Jump states, and most of
+Operator, leaving only LineStart and LoadImmediate.
+
+It would require us to be able to preimage memory with the transition table, though.
+

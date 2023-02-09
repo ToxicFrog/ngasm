@@ -14,23 +14,23 @@ M - the contents of memory at the address given by the A register
 Instructions are fixed-width 16-bit words with the following layout:
 
 ```
-Bit  Name   Meaning
- F    ci    If 0, load immediate. Otherwise perform computation.
- E    -     unused
- D    -     unused
- C    mr    if set, ALU inputs are [D, M] rather than [D, A]
- B    -     unused
- A    u     if 1, ALU does math. If 0, logic.
- 9    op1   ] ALU ops. For math: 00 = +, 01 = inc, 10 = -, 11 = dec
- 8    op2   ] For logic: 00 = and, 01 = or, 10 = xor, 11 = not.
- 7    zx    If 1, first operand to ALU is 0. This is applied after sw and m.
- 6    sw    If 1, ALU gets [A, D] instead of [D, A] as inputs.
- 5    a     Write result to A.
- 4    d     Write result to D.
- 3    m     Write result to M.
- 2    lt    Jump if result <0.
- 1    eq    Jump if result =0.
- 0    gt    Jump if result >0.
+Mask  Bit  Name   Meaning
+8000  F    ci    If 0, load immediate. Otherwise perform computation.
+4000  E    -     unused
+2000  D    -     unused
+1000  C    mr    if set, ALU inputs are [D, M] rather than [D, A]
+0800  B    -     unused
+0400  A    u     if 1, ALU does math. If 0, logic.
+0200  9    op1   ] ALU ops. For math: 00 = +, 01 = inc, 10 = -, 11 = dec
+0100  8    op0   ] For logic: 00 = and, 01 = or, 10 = xor, 11 = not.
+0080  7    zx    If 1, first operand to ALU is 0. This is applied after sw and m.
+0040  6    sw    If 1, ALU gets [A, D] instead of [D, A] as inputs.
+0020  5    a     Write result to A.
+0010  4    d     Write result to D.
+0008  3    m     Write result to M.
+0004  2    lt    Jump if result <0.
+0002  1    eq    Jump if result =0.
+0001  0    gt    Jump if result >0.
 ```
 
 There are two families of instructions: load-immediate, and compute-and-jump. These are determined by the first bit; if
