@@ -26,7 +26,7 @@ local function command(name)
 end
 
 local function printf(...)
-  return io.stdout:write(string.format(...))
+  return io.stderr:write(string.format(...))
 end
 
 local function run(CPU, line)
@@ -128,11 +128,11 @@ function commands.flash.fn(CPU, path)
       data = xxd2bin(data)
     end
     CPU:flash(data)
-    --printf("Flashed %d words to ROM.\n", #data+1)
+    printf("Flashed %d words to ROM.\n", #data+1)
   else
     assert(#data % 2 == 0, "ROM image has an odd number of bytes")
     CPU:flash(data)
-    --printf("Flashed %d words to ROM.\n", #data/2)
+    printf("Flashed %d words to ROM.\n", #data/2)
   end
 end
 
@@ -167,5 +167,12 @@ function commands.file.fn(CPU, path, address, mode)
   CPU:attach(address, require('iostream').new(path, mode))
 end
 
+command 'info' '' 'Display emulated CPU state' [[
+  Outputs a line containing the current state of the emulated CPU. This is the
+  same output format used by 'trace'.
+]]
+function commands.info.fn(CPU)
+  printf('%s\n', CPU)
+end
 
 return { main=main }
