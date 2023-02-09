@@ -155,4 +155,17 @@ command 'trace' '' 'Run the program while printing CPU state' [[
 ]]
 commands.trace.fn = vm.trace
 
+command 'file' 'path address [mode]' 'Attach a file to the emulator' [[
+  Attaches a file for byte-by-byte or word-by-word IO. It is mapped at the
+  given address and the subsequent two addresses; see iostream.lua for
+  details of how program code can access it. If not specified the mode
+  defaults to rb (read only).
+]]
+function commands.file.fn(CPU, path, address, mode)
+  mode = mode or 'rb'
+  address = tonumber(address)
+  CPU:attach(address, require('iostream').new(path, mode))
+end
+
+
 return { main=main }
