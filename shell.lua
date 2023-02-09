@@ -56,8 +56,8 @@ function main(CPU, commands)
       io.stdout:write('\n> ')
       io.stdout:flush()
     end
+    print('Goodbye!')
   end
-  print('Goodbye!')
 end
 
 command 'exit' '' 'Exit the emulator' [[
@@ -128,11 +128,11 @@ function commands.flash.fn(CPU, path)
       data = xxd2bin(data)
     end
     CPU:flash(data)
-    printf("Flashed %d words to ROM.\n", #data+1)
+    --printf("Flashed %d words to ROM.\n", #data+1)
   else
     assert(#data % 2 == 0, "ROM image has an odd number of bytes")
     CPU:flash(data)
-    printf("Flashed %d words to ROM.\n", #data/2)
+    --printf("Flashed %d words to ROM.\n", #data/2)
   end
 end
 

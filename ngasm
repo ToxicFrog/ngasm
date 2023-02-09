@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Run the assembler the VM.
+# Usage: ngasm input.asm output.bin
+# To get a .hex file, just run the output through xxd, either post hoc or
+# like so:
+# $ ngasm input.asm /dev/stdout | xxd > output.hex
+
+rlwrap luajit main.lua \
+  "flash ngasm.hex" \
+  "file $1 0x7FF0" \
+  "file $2 0x7FF8 wb" \
+  "run"
