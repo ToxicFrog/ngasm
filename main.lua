@@ -1,7 +1,11 @@
 local vm = require "vm"
 local iostream = require "iostream"
+local shell = require "shell"
 
 local CPU = vm.new()
+shell.main(CPU, {...})
+do return end
+
 local ngasm = io.open('ngasm.bin', 'rb'):read('*a')
 CPU:attach(0x7FF0, iostream.new('test.asm', 'rb'))
 CPU:attach(0x7FF8, iostream.new('test.bin', 'wb'))
