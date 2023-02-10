@@ -54,7 +54,7 @@ function main(CPU, commands)
     -- interactive mode
     io.stdout:write('Emulator ready. Type "help" for a list of commands.\n> ')
     io.stdout:flush()
-    for line in instructions(commands) do
+    for line in io.lines() do
       run(CPU, line)
       io.stdout:write('\n> ')
       io.stdout:flush()
@@ -175,6 +175,15 @@ command 'info' '' 'Display emulated CPU state' [[
   same output format used by 'trace'.
 ]]
 function commands.info.fn(CPU)
+  printf('%s\n', CPU)
+end
+
+command 'step' '' 'Step the CPU one instruction' [[
+  Executes one instruction and then outputs the state of the CPU. Equivalent
+  to a one-cycle 'trace'.
+]]
+function commands.step.fn(CPU)
+  CPU:step()
   printf('%s\n', CPU)
 end
 
