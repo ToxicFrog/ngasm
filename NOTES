@@ -33,3 +33,8 @@ Operator, leaving only LineStart and LoadImmediate.
 
 It would require us to be able to preimage memory with the transition table, though.
 
+
+Features I really need in the assembler:
+
+'x for character constant
+$xxx for hex constants

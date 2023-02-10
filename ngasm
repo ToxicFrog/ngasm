@@ -5,6 +5,8 @@
 # like so:
 # $ ngasm input.asm /dev/stdout | xxd > output.hex
 
+ROM=${ROM:=ngasm.hex}
+
 rlwrap luajit main.lua \
   "flash ngasm.hex" \
   "file $1 0x7FF0" \
