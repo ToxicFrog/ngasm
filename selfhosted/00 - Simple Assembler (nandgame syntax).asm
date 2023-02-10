@@ -440,7 +440,7 @@ D = A
 
 # Operand is A, set the sw bit.
   LHS_A:
-A = 0x1000
+A = 0x0040
 # Use | here so that the fallthrough case from LHS_M works as expected.
 # If we came from LHS proper, D is guaranteed to be zero because we JEQ'd.
 D = D|A
@@ -623,14 +623,14 @@ JMP
   RHS_D:
 A = 0x0040
 D = A
-A = LHS_SetBits
+A = RHS_SetBits
 JMP
 
 # Operand is M, set the mr bit.
   RHS_M:
 A = 0x1000
 D = A
-A = LHS_SetBits
+A = RHS_SetBits
 JMP
 
 # Operand is 1, set op0 to turn add into inc and sub into dec.
@@ -683,7 +683,7 @@ D;JEQ
 # greater than
 A = char
 D = *A
-A = 0x3D
+A = 0x3E
 D = D-A
 A = Jump_GT
 D;JEQ
