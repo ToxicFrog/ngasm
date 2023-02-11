@@ -1,51 +1,97 @@
-;;;; Assembler, stage 2 ;;;;
+;;;; Assembler, stage 3 ;;;;
 ;
-; This extends the stage 1 assembler with support for labels.
-; To avoid having to fix all the jump targets, all new code is added at the end
-; and existing code is modified to jump to it without changing what line it
-; occurs on. Scroll to line 605 for the new code and comments.
-; This line intentionally left blank.
-
-;;;; Program Code ;;;;
+; This refactors the assembler to make use of the labels feature added in stage
+; 2. No functionality is changed but it should be easier to follow now.
 
 ; Globals
-; Most recently read character
-;DEFINE &char 0
-; Opcode under construction
-;DEFINE &opcode 1
-; True if we are in read-and-discard-comment mode
-;DEFINE &in_comment 2
-; Pointer to current state
-;DEFINE &state 3
+; Since each line outputs an instruction, we can use labels for our variables
+; as well. In the future we'll have define but this works in the meantime.
+; The convention used here is:
+; - variable addresses start with :&
+; - constants that are not memory addresses with :#
+; - jump labels with plain :
 
+; Most recently read character
+:&char.
+; Opcode under construction
+:&opcode.
+; True if we are in read-and-discard-comment mode
+:&in_comment.
+; Pointer to current state
+:&state.
+
+; Whether we're on the first pass (0) or the second pass (1).
+; There are more elegant ways to do this but I can implement those once we have
+; label support working. :)
+:&pass.
+
+; Program counter. Used to generate labels.
+:&pc.
+
+; Hash of current label. Filled in by states that read labels in the source code
+; and used by routines that commit or look up labels.
+:&label.
+
+; Pointer just past the end of the symbol table. To write a new symbol we put
+; it here and then increment this pointer. When resolving a symbol, if we reach
+; this point, we've gone too far.
+:&last_sym.
+; Pointer to the current symbol we are looking at. Used during symbol resolution
+; as scratch space.
+:&this_sym.
+
+; The actual table. The table is an array of [symbol_hash, value] pairs
+; occupying two words each and stored contiguously in memory.
+; This goes last since it will grow as new symbols are added and we don't want
+; it overwriting something else!
+:&symbols.
+
+; Memory-mapped IO we still need to hard-code until we have define, using labels
+; as variables only works for stuff where we don't care exactly where it ends up.
 ;DEFINE &stdin_status 0x7FF0
 ;DEFINE &stdin 0x7FF1
 ;DEFINE &stdout_bytes 0x7FF9
 ;DEFINE &stdout 0x7FFA
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Initialization                                                             ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; This needs to run once at program startup.
+; It sets last_sym to point to the start of the symbol table so that we
+; write symbols to the right place.
+  :Init.
+@ 400 ; &symbols
+D = 0|A
+@ 377 ; &last_sym
+M = 0|D
+; Fall through to :NewInstruction
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Main loop and helpers                                                      ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; Jump to revised startup code we added around line 610.
-@ :Init.
+; This is called once at startup and once at the beginning of each line.
+; It has been relocated here from the start of the file so we can put Init
+; in front of it.
+  :NewInstruction.
+; Set opcode to 0x8000, which is a no-op (computes D&A and discards it).
+; We do this by computing 0x4000+0x4000 since we can't express 0x8000 directly.
+@ 40000 ;16384
+D = 0+A
+D = D+A
+@ 1 ; &opcode
+M = 0|D
+; Clear the in_comment flag
+@ 2 ; &in_comment
+M = 0&D
+; Set the current state to NewLine, the start-of-line state
+@ :LineStart.
+D = 0|A
+@ 3 ; &state
+M = 0|D
+@ :MainLoop.
 = 0|D <=>
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
 
 ; Core loop.
 ; This reads input byte by byte. Spaces and comments are discarded, newlines
@@ -102,48 +148,95 @@ M = 0+1
 @ :MainLoop.
 = 0|D <=>
 
-; Called to output the opcode being generated, at the end of a line. Jumps to
-; NewInstruction when done to reinitialize the globals.
-  :EndOfLine.
-@ :EndOfLine_CheckPass.
+; Called at end-of-file. At the end of the first pass this needs to rewind the
+; file and start the second pass; at the end of the second pass it exits.
+  :NextPass.
+; If pass>0, exit the program.
+@ 20 ; &pass
+D = 0|M
+@ :Exit.
+= 0|D >
+; Otherwise, rewind stdin to start of file by writing a 0 to it
+@ 77760 ; &stdin_status
+M = 0&D
+; Then increment pass and restart the main loop.
+@ 20 ; &pass
+M = M+1
+@ :MainLoop.
 = 0|D <=>
-; removed ;
-; removed ;
-; removed ;
-; removed ;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; End-of-line handling                                                       ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Called at the end of every line. Checks pass to determine what it should do.
+; In pass 0, it increments pc so that we know what addresses to associate with
+; labels when we encounter them; in pass 1 it actually emits code.
+; In either case it calls NewInstruction afterwards to reset the parser state,
+; opcode buffer, etc.
+  :EndOfLine.
+; If pass == 0, call _FirstPass, else _SecondPass.
+@ 20 ; &pass
+D = 0|M
+@ :EndOfLine_FirstPass.
+= 0|D =
+@ :EndOfLine_SecondPass.
+= 0|D <=>
+
+  :EndOfLine_FirstPass.
+; First pass, so increment PC and output nothing.
+@ 21 ; &pc
+M = M+1
+@ :NewInstruction.
+= 0|D <=>
+
+  :EndOfLine_SecondPass.
+; Second pass, so write the opcode to stdout. On lines containing no code,
+; NewInstruction will have set this up as a no-op, so it's safe to emit
+; regardless.
+@ 1 ; &opcode
+D = 0|M
+@ 77772 ; &stdout
+M = 0|D
+@ :NewInstruction.
+= 0|D <=>
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; LineStart state                                                            ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; Old linestart state here
-; just a stub that calls the new one down below
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-@ :LineStart.
-= 0|D <=>
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-; removed ;
-
+; This state sees the first (non-whitespace, non-comment) character on each line.
+; Its job is to decide, based on that character, what sort of line this is:
+;   @ means that it's a load immediate instruction
+;   : means that it's a label definition
+;   anything else means a compute instruction
+; Label definitions have special handling based on the pass. If we're in pass 0,
+; it transfers control to ReadLabel for the rest of the line, which will read in
+; the label and add a symbol table entry for it based on PC.
+; In pass 1, however, it instead calls CommentStart, treating labels like
+; comments. (Actual uses of labels once defined are always as part of an @
+; load immediate instruction, so those are handled in LoadImmediate.)
+  :LineStart.
+; Is it an @? If so this is a load immediate A opcode.
+@ 0 ; &char
+D = 0|M
+@ 100 ; '@'
+D = D-A
+@ :LineStart_LoadImmediate.
+= 0|D =
+; If it's a :, this is a label definition and we branch further depending on
+; what pass we're on.
+@ 0 ; &char
+D = 0|M
+@ 72 ; ':'
+D = D-A
+@ :LineStart_Label.
+= 0|D =
+; None of the above match.
 ; It's the start of a compute instruction. The first character is already going
 ; to be significant, so we need to set the current state to Destination and then
 ; jump to Destination rather than MainLoop, so we don't skip the current char.
-  :LineStart_ComputeInstruction.
 @ :Destination.
 D = 0|A
 @ 3 ; &state
@@ -151,9 +244,79 @@ M = 0|D
 @ :Destination.
 = 0|D <=>
 
+; Called when the line starts with @. Set the current state to LoadImmediate
+; and return control to the main loop.
+  :LineStart_LoadImmediate.
+@ :LoadImmediate.
+D = 0|A
+@ 3 ; &state
+M = 0|D
+@ :MainLoop.
+= 0|D <=>
+
+; Called when the line starts with :, denoting a label definition.
+; If in the first pass, we transfer control to ReadLabel
+; else treat it like a comment.
+  :LineStart_Label.
+@ 20 ; &pass
+D = 0|M
+; On pass 1, call CommentStart, the same routine used by the main loop when it
+; sees a ';' character. This will flag this character, and the rest of the line,
+; as a comment.
+@ :CommentStart.
+= 0|D <>
+; On pass 0, we need to actually read in the label and associate a value with it.
+; ReadLabel_Init will initialize the label reader, read in the label, and,
+; knowing that we're on the first pass, create a new symbol table entry for it.
+@ :ReadLabel_Init.
+= 0|D <=>
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; LoadImmediate state                                                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; This is called immediately after LineStart sees an @. If it sees a :, it passes
+; control to LoadImmediate_Label to read the label. Otherwise it passes control
+; to LoadImmediate_Constant to read an octal number.
+  :LoadImmediate.
+@ 0 ; &char
+D = 0|M
+@ 72 ; ':'
+D = D-A
+@ :LoadImmediate_Label.
+= 0|D =
+; No label? Transfer control to LoadImmediate_Constant instead, and call it immediately to process the first digit.
+@ :LoadImmediate_Constant.
+D = 0|A
+@ 3 ; &state
+M = 0|D
+@ :LoadImmediate_Constant.
+= 0|D <=>
+
+; This becomes the active state after LoadImmediate sees a :. It is responsible
+; for processing the label character by character into &label.
+  :LoadImmediate_Label.
+; First set ourself as the current state, so that it doesn't go through
+; LoadImmediate above when it sees the next character and end up flopping
+; between label and constant mode.
+@ :LoadImmediate_Label.
+D = 0|A
+@ 3 ; &state
+M = 0+D
+; If we're on the first pass, we aren't guaranteed to have bindings for these
+; symbols yet, but we also aren't generating code yet, so just ignore every
+; character we're passed and jump back to MainLoop.
+@ 20 ; &pass
+D = 0|M
+@ :MainLoop.
+= 0|D =
+; We're on pass 1. We need to actually resolve the symbol.
+; ReadLabel_Init will initialize the label reader and set it as the current
+; state. When it's done reading the label it will (knowing that it's on pass 1)
+; leave the associated value in the opcode buffer, and EndOfLine will handle
+; outputting it.
+@ :ReadLabel_Init.
+= 0|D <=>
 
 ; The state for reading the number in a load immediate instruction.
 ; The number is octal, so for each digit, we multiply the existing number by
@@ -594,7 +757,7 @@ M = D | M
 
 ; Error state. Write a single zero byte to the output so that external tools can
 ; tell something went wrong, since the output will have an odd number of bytes
-; in it.
+; in it.l
 ; Someday we should have a way to reopen and thus erase the file.
   :Error.
 @ 77771 ; &stdout_bytes
@@ -627,92 +790,19 @@ M = 0&A
 ; - at end of line, output the current instruction;
 ; - upon seeing a label definition, ignore it;
 ; - upon seeing a label reference, look it up in the symbol table.
-;
-; This implies that we need to overhaul a number of states and procedures:
-; - We need an alternate version of EndOfLine that understands whether it's
-;   on the first or second pass. It also needs to check if we're in the middle
-;   of reading a label and finalize it if so -- eurgh.
-; - We need to upgrade LineStart to recognize : as the start of a label and
-;   transition to a new DefineLabel state. DefineLabel itself needs to be a
-;   no-op on the second pass.
-; - We need to upgrade LoadImmediate to recognize : as the start of a label and
-;   look up the resulting label in the symbol table.
-;
-;
-
-;;;; Globals ;;;;
-
-; Whether we're on the first pass (0) or the second pass (1).
-; There are more elegant ways to do this but I can implement those once we have
-; label support working. :)
-; DEFINE pass 0x10
-
-; Program counter. Used to generate labels.
-; DEFINE pc 0x11
-
-; Hash of current label. Filled in by states that read labels in the source code
-; and used by routines that commit or look up labels.
-; DEFINE label 0x12
-
-; Symbol table structures. The table is an array of [symbol_hash, value] pairs
-; occupying two words each and stored contiguously in memory.
-; DEFINE symbols 0x100
-; Pointer just past the end of the symbol table. To write a new symbol we put
-; it here and then increment this pointer. When resolving a symbol, if we reach
-; this point, we've gone too far.
-; DEFINE last_sym 0xFF
-; Pointer to the current symbol we are looking at. Used during symbol resolution
-; as scratch space.
-; DEFINE this_sym 0xFE
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Initialization                                                             ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; This needs to run once at program startup.
-; It sets last_sym to point to the start of the symbol table so that we
-; write symbols to the right place.
-  :Init.
-@ 400 ; &symbols
-D = 0|A
-@ 377 ; &last_sym
-M = 0|D
-; Fall through to :NewInstruction
-
-; This is called once at startup and once at the beginning of each line.
-; It has been relocated here from the start of the file so we can put Init
-; in front of it.
-  :NewInstruction.
-; Set opcode to 0x8000, which is a no-op (computes D&A and discards it).
-; We do this by computing 0x4000+0x4000 since we can't express 0x8000 directly.
-@ 40000 ;16384
-D = 0+A
-D = D+A
-@ 1 ; &opcode
-M = 0|D
-; Clear the in_comment flag
-@ 2 ; &in_comment
-M = 0&D
-; Set the current state to NewLine, the start-of-line state
-@ :LineStart.
-D = 0|A
-@ 3 ; &state
-M = 0|D
-@ :MainLoop.
-= 0|D <=>
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Label reading                                                              ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; This is a preamble to ReadLabel_State (below). It sets the state pointer to
-; ReadLabel_State so future inputs will be directed to it, and clears the label
+; This is a preamble to ReadLabel (below). It sets the state pointer to
+; ReadLabel so future inputs will be directed to it, and clears the label
 ; variable so we can start reading into it.
 ; When LineStart or LoadImmediate encounter a label, this is what they call.
-  :ReadLabel.
+  :ReadLabel_Init.
 @ 22 ; &label
 M = 0&D
-@ :ReadLabel_State.
+@ :ReadLabel.
 D = 0|A
 @ 3 ; &state
 M = 0|D
@@ -723,7 +813,7 @@ M = 0|D
 ; for reading the label into the label variable. Upon finishing the read, it
 ; either writes it to the symbol table (first pass) or replaces it with the
 ; value bound to it and calls LoadImmediate_ResolveSymbol (second pass).
-  :ReadLabel_State.
+  :ReadLabel.
 @ 0 ; &char
 D = 0|M
 @ 56 ; '.'
@@ -815,6 +905,7 @@ M = M+1
 M = M+1
 @ :ReadLabel_Resolve_Loop.
 = 0|D <=>
+
 ; Called when we successfully find an entry in the symbol table. this_sym holds
 ; a pointer to the label cell of the entry, so we need to inc it to get the
 ; value cell.
@@ -835,158 +926,4 @@ D = 0|A
 @ 3 ; &state
 M = 0|D
 @ :MainLoop.
-= 0|D <=>
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Revised LoadImmediate handling                                             ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; This is called immediately after LineStart sees an @. If it sees a :, it passes
-; control to LoadImmediate_Label to read the label. Otherwise it passes control
-; to LoadImmediate_Constant to read an octal number.
-  :LoadImmediate.
-@ 0 ; &char
-D = 0|M
-@ 72 ; ':'
-D = D-A
-@ :LoadImmediate_Label.
-= 0|D =
-; No label? Transfer control to LoadImmediate_Constant instead, and call it immediately to process the first digit.
-@ :LoadImmediate_Constant.
-D = 0|A
-@ 3 ; &state
-M = 0|D
-@ :LoadImmediate_Constant.
-= 0|D <=>
-
-; This becomes the active state after LoadImmediate sees a :. It is responsible
-; for processing the label character by character into &label.
-  :LoadImmediate_Label.
-; First check what pass we're on. If it's pass 0 we just read and ignore everything,
-; who cares, we aren't generating code yet. Set the state pointer to this state
-; so the rest of the line is read as a label and discarded.
-@ :LoadImmediate_Label.
-D = 0|A
-@ 3 ; &state
-M = 0+D
-@ 20 ; &pass
-D = 0|M
-@ :MainLoop.
-= 0|D =
-; We're on pass 1. We need to actually resolve the symbol.
-; Calling ReadLabel will do what we want here: it will set the state to
-; ReadLabel (bypassing this code) and then read input until the label is complete,
-; then attempt to resolve it. If it resolves it successfully it will leave the
-; resolved value in opcode and we need no further involvement.
-@ :ReadLabel.
-= 0|D <=>
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Revised end-of-line handling                                               ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-  :EndOfLine_CheckPass.
-; If pass == 0, call _FirstPass, else _SecondPass.
-; TODO: if there is a label under construction, we need to commit it here.
-@ 20 ; &pass
-D = 0|M
-@ :EndOfLine_FirstPass.
-= 0|D =
-@ :EndOfLine_SecondPass.
-= 0|D <=>
-
-  :EndOfLine_FirstPass.
-; Increment PC, then call NewInstruction to set up the variables for the next line.
-@ 21 ; &pc
-M = M+1
-@ :NewInstruction.
-= 0|D <=>
-
-  :EndOfLine_SecondPass.
-; Write opcode to stdout, then call NewInstruction to set up the variables for
-; the next line.
-@ 1 ; &opcode
-D = 0|M
-@ 77772 ; &stdout
-M = 0|D
-@ :NewInstruction.
-= 0|D <=>
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; End-of-file handling                                                       ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; In the first version of this, at end of file we just stopped.
-; Now that this is a two-pass compiler, at the end of the first pass we need to
-; seek back to the start of the file and increment the pass counter, and at the
-; end of the second pass we need to halt.
-  :NextPass.
-; If pass>0, exit the program.
-@ 20 ; &pass
-D = 0|M
-@ :Exit.
-= 0|D >
-; Otherwise, rewind stdin to start of file by writing a 0 to it
-@ 77760 ; &stdin_status
-M = 0&D
-; Then increment pass and restart the main loop.
-@ 20 ; &pass
-M = M+1
-@ :MainLoop.
-= 0|D <=>
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Revised LineStart state                                                    ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; This is like the original except when it sees a :.
-; If we're in first pass, it transfers control to ReadLabel.
-; In the second pass, it treats it like a comment.
-
-; The base state that we get reset to at the end of every line.
-; It looks at the first character of the line and if it's an @, transitions to
-; LoadImmediate.
-; Anything else causes a transition to Destination, to read the A/D/M bits at
-; the start of a compute instruction.
-  :LineStart.
-; Is it an @? If so this is a load immediate A opcode.
-@ 0 ; &char
-D = 0|M
-@ 100 ; '@'
-D = D-A
-@ :LineStart_LoadImmediate.
-= 0|D =
-; If it's a :, this is a label definition and we branch further depending on
-; what pass we're on.
-@ 0 ; &char
-D = 0|M
-@ 72 ; ':'
-D = D-A
-@ :LineStart_Label.
-= 0|D =
-; If neither of the above match this is a compute instruction.
-@ :LineStart_ComputeInstruction.
-= 0|D <=>
-
-; Called when the line starts with @. Set the current state to LoadImmediate
-; and return control to the main loop.
-  :LineStart_LoadImmediate.
-@ :LoadImmediate.
-D = 0|A
-@ 3 ; &state
-M = 0|D
-@ :MainLoop.
-= 0|D <=>
-
-; Called when the line starts with :. Call the label handler if in the first pass
-; else treat it like a comment.
-  :LineStart_Label.
-@ 20 ; &pass
-D = 0|M
-; pass=0? invoke the label reader
-@ :ReadLabel.
-= 0|D =
-; else treat this like a comment
-@ :CommentStart.
 = 0|D <=>
