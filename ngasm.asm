@@ -61,9 +61,9 @@
 ; It sets last_sym to point to the start of the symbol table so that we
 ; write symbols to the right place.
   :Init.
-@ 400 ; &symbols
+@ :&symbols.
 D = 0|A
-@ 377 ; &last_sym
+@ :&last_sym.
 M = 0|D
 ; Fall through to :NewInstruction
 
@@ -80,15 +80,15 @@ M = 0|D
 @ 40000 ;16384
 D = 0+A
 D = D+A
-@ 1 ; &opcode
+@ :&opcode.
 M = 0|D
 ; Clear the in_comment flag
-@ 2 ; &in_comment
+@ :&in_comment.
 M = 0&D
 ; Set the current state to NewLine, the start-of-line state
 @ :LineStart.
 D = 0|A
-@ 3 ; &state
+@ :&state.
 M = 0|D
 @ :MainLoop.
 = 0|D <=>
@@ -105,7 +105,7 @@ D = 0|M
 ; Read next byte of input and stash it in char
 @ 77761 ; &stdin
 D = 0|M
-@ 0 ; &char
+@ :&char.
 M = 0|D
 ; If it's a newline, run the end-of-line routine.
 @ 12
@@ -113,19 +113,19 @@ D = D - A
 @ :EndOfLine.
 = 0|D =
 ; If we're in a comment, skip this character
-@ 2 ; &in_comment
+@ :&in_comment.
 D = 0|M
 @ :MainLoop.
 = 0|D <>
 ; Also skip spaces
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 40
 D = D - A
 @ :MainLoop.
 = 0|D =
 ; If it's a start-of-comment character, run CommentStart to set the in_comment flag
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 73
 D = D - A
@@ -134,7 +134,7 @@ D = D - A
 ; At this point, it's not a newline, it's not a space, it's not the start or
 ; interior of a comment, so it should hopefully be part of an instruction.
 ; Call the current state to deal with it. It will jump back to MainLoop when done.
-@ 3 ; &state
+@ :&state.
 A = 0|M
 = 0|D <=>
 
@@ -143,7 +143,7 @@ A = 0|M
 ; Called when it sees the start-of-comment character. Sets the in_comment flag
 ; and ignores the input otherwise.
   :CommentStart.
-@ 2 ; &in_comment
+@ :&in_comment.
 M = 0+1
 @ :MainLoop.
 = 0|D <=>
@@ -152,7 +152,7 @@ M = 0+1
 ; file and start the second pass; at the end of the second pass it exits.
   :NextPass.
 ; If pass>0, exit the program.
-@ 20 ; &pass
+@ :&pass.
 D = 0|M
 @ :Exit.
 = 0|D >
@@ -160,7 +160,7 @@ D = 0|M
 @ 77760 ; &stdin_status
 M = 0&D
 ; Then increment pass and restart the main loop.
-@ 20 ; &pass
+@ :&pass.
 M = M+1
 @ :MainLoop.
 = 0|D <=>
@@ -177,7 +177,7 @@ M = M+1
 ; opcode buffer, etc.
   :EndOfLine.
 ; If pass == 0, call _FirstPass, else _SecondPass.
-@ 20 ; &pass
+@ :&pass.
 D = 0|M
 @ :EndOfLine_FirstPass.
 = 0|D =
@@ -186,7 +186,7 @@ D = 0|M
 
   :EndOfLine_FirstPass.
 ; First pass, so increment PC and output nothing.
-@ 21 ; &pc
+@ :&pc.
 M = M+1
 @ :NewInstruction.
 = 0|D <=>
@@ -195,7 +195,7 @@ M = M+1
 ; Second pass, so write the opcode to stdout. On lines containing no code,
 ; NewInstruction will have set this up as a no-op, so it's safe to emit
 ; regardless.
-@ 1 ; &opcode
+@ :&opcode.
 D = 0|M
 @ 77772 ; &stdout
 M = 0|D
@@ -219,7 +219,7 @@ M = 0|D
 ; load immediate instruction, so those are handled in LoadImmediate.)
   :LineStart.
 ; Is it an @? If so this is a load immediate A opcode.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 100 ; '@'
 D = D-A
@@ -227,7 +227,7 @@ D = D-A
 = 0|D =
 ; If it's a :, this is a label definition and we branch further depending on
 ; what pass we're on.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 72 ; ':'
 D = D-A
@@ -239,7 +239,7 @@ D = D-A
 ; jump to Destination rather than MainLoop, so we don't skip the current char.
 @ :Destination.
 D = 0|A
-@ 3 ; &state
+@ :&state.
 M = 0|D
 @ :Destination.
 = 0|D <=>
@@ -249,7 +249,7 @@ M = 0|D
   :LineStart_LoadImmediate.
 @ :LoadImmediate.
 D = 0|A
-@ 3 ; &state
+@ :&state.
 M = 0|D
 @ :MainLoop.
 = 0|D <=>
@@ -258,7 +258,7 @@ M = 0|D
 ; If in the first pass, we transfer control to ReadLabel
 ; else treat it like a comment.
   :LineStart_Label.
-@ 20 ; &pass
+@ :&pass.
 D = 0|M
 ; On pass 1, call CommentStart, the same routine used by the main loop when it
 ; sees a ';' character. This will flag this character, and the rest of the line,
@@ -279,7 +279,7 @@ D = 0|M
 ; control to LoadImmediate_Label to read the label. Otherwise it passes control
 ; to LoadImmediate_Constant to read an octal number.
   :LoadImmediate.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 72 ; ':'
 D = D-A
@@ -288,7 +288,7 @@ D = D-A
 ; No label? Transfer control to LoadImmediate_Constant instead, and call it immediately to process the first digit.
 @ :LoadImmediate_Constant.
 D = 0|A
-@ 3 ; &state
+@ :&state.
 M = 0|D
 @ :LoadImmediate_Constant.
 = 0|D <=>
@@ -301,12 +301,12 @@ M = 0|D
 ; between label and constant mode.
 @ :LoadImmediate_Label.
 D = 0|A
-@ 3 ; &state
+@ :&state.
 M = 0+D
 ; If we're on the first pass, we aren't guaranteed to have bindings for these
 ; symbols yet, but we also aren't generating code yet, so just ignore every
 ; character we're passed and jump back to MainLoop.
-@ 20 ; &pass
+@ :&pass.
 D = 0|M
 @ :MainLoop.
 = 0|D =
@@ -323,7 +323,7 @@ D = 0|M
 ; 8 (by repeated doubling via self-adding) and then add the new digit to it.
   :LoadImmediate_Constant.
 ; Start by making room in the opcode
-@ 1 ; &opcode
+@ :&opcode.
 D = 0|M
 M = D+M
 D = 0|M
@@ -331,13 +331,13 @@ M = D+M
 D = 0|M
 M = D+M
 ; Opcode has now been multiplied by 8, add the next digit.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 ; Subtract '0' to get a value in the range 0-7
 ; or out of the range if the user typed in some sort of garbage, oh well
 @ 60 ; '0'
 D = D-A
-@ 1 ; &opcode
+@ :&opcode.
 M = D+M
 @ :MainLoop.
 = 0|D <=>
@@ -350,28 +350,28 @@ M = D+M
 ; designating the destination(s) for the computed values.
   :Destination.
 ; Check for =, which sends us to the next state (LHS)
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 75 ; '='
 D = D-A
 @ :Destination_Finished.
 = 0|D =
 ; Check for A.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 101 ; 'A'
 D = D-A
 @ :Destination_A.
 = 0|D =
 ; Check for D.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 104 ; 'D'
 D = D-A
 @ :Destination_D.
 = 0|D =
 ; Check for M.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 115 ; 'M'
 D = D-A
@@ -386,7 +386,7 @@ D = D-A
   :Destination_Finished.
 @ :LHS.
 D = 0|A
-@ 3 ; &state
+@ :&state.
 M = 0|D
 @ :MainLoop.
 = 0|D <=>
@@ -410,7 +410,7 @@ D = 0|A
 ; fall through
 ; The bit we want is in D, so bitwise-or it into the opcode
   :Destination_SetBits.
-@ 1 ; &opcode
+@ :&opcode.
 M = D | M
 @ :MainLoop.
 = 0|D <=>
@@ -428,28 +428,28 @@ M = D | M
 ; that will be handled by the RHS state.
   :LHS.
 ; Check for A.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 101 ; 'A'
 D = D-A
 @ :LHS_A.
 = 0|D =
 ; Check for D.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 104 ; 'D'
 D = D-A
 @ :LHS_Done.
 = 0|D =
 ; Check for M.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 115 ; 'M'
 D = D-A
 @ :LHS_M.
 = 0|D =
 ; Check for 0.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 60 ; '0'
 D = D-A
@@ -482,13 +482,13 @@ D = D|A
 
 ; D contains some pile of bits. Set them in the opcode.
   :LHS_SetBits.
-@ 1 ; &opcode
+@ :&opcode.
 M = D | M
 ; fall through
   :LHS_Done.
 @ :Operator.
 D = 0|A
-@ 3 ; &state
+@ :&state.
 M = 0|D
 @ :MainLoop.
 = 0|D <=>
@@ -508,42 +508,42 @@ M = 0|D
 ; inc and dec are handled in the RHS state.
   :Operator.
 ; add
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 53 ; '+'
 D = D-A
 @ :Operator_Add.
 = 0|D =
 ; sub
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 55 ; '-'
 D = D-A
 @ :Operator_Sub.
 = 0|D =
 ; and
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 46 ; &
 D = D-A
 @ :Operator_And.
 = 0|D =
 ; or
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 174 ; '|'
 D = D-A
 @ :Operator_Or.
 = 0|D =
 ; xor
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 136 ; '^'
 D = D-A
 @ :Operator_Xor.
 = 0|D =
 ; not
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 41 ; '!'
 D = D-A
@@ -587,22 +587,22 @@ D = 0|A
   :Operator_Not.
 @ 1400 ; 0x0300
 D = 0|A
-@ 1 ; &opcode
+@ :&opcode.
 M = D | M
 @ :Jump.
 D = 0|A
-@ 3 ; &state
+@ :&state.
 M = 0|D
 @ :MainLoop.
 = 0|D <=>
 
 ; Write bits to opcode, set next state to RHS, return to main loop.
   :Operator_SetBits.
-@ 1 ; &opcode
+@ :&opcode.
 M = D | M
 @ :RHS.
 D = 0|A
-@ 3 ; &state
+@ :&state.
 M = 0|D
 @ :MainLoop.
 = 0|D <=>
@@ -620,28 +620,28 @@ M = 0|D
 ; something that isn't what you asked for -- in the above case D|A.
   :RHS.
 ; Check for A. This is the default case, so we set no bits.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 101 ; 'A'
 D = D-A
 @ :RHS_Done.
 = 0|D =
 ; Check for D.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 104 ; 'D'
 D = D-A
 @ :RHS_D.
 = 0|D =
 ; Check for M.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 115 ; 'M'
 D = D-A
 @ :RHS_M.
 = 0|D =
 ; Check for 1.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 61 ; '1'
 D = D-A
@@ -677,7 +677,7 @@ D = 0|A
 
 ; D contains some pile of bits. Set them in the opcode.
   :RHS_SetBits.
-@ 1 ; &opcode
+@ :&opcode.
 M = D | M
 ; fall through
 
@@ -685,7 +685,7 @@ M = D | M
   :RHS_Done.
 @ :Jump.
 D = 0|A
-@ 3 ; &state
+@ :&state.
 M = 0|D
 @ :MainLoop.
 = 0|D <=>
@@ -702,21 +702,21 @@ M = 0|D
 ; the assembler sits in this state until the end of the line is reached.
   :Jump.
 ; less than
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 74 ; '<'
 D = D-A
 @ :Jump_LT.
 = 0|D =
 ; equal
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 75 ; '='
 D = D-A
 @ :Jump_EQ.
 = 0|D =
 ; greater than
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 76 ; '>'
 D = D-A
@@ -746,7 +746,7 @@ D = 0|A
 ; D contains some pile of bits. Set them in the opcode and remain in the same
 ; state.
   :Jump_SetBits.
-@ 1 ; &opcode
+@ :&opcode.
 M = D | M
 @ :MainLoop.
 = 0|D <=>
@@ -800,11 +800,11 @@ M = 0&A
 ; variable so we can start reading into it.
 ; When LineStart or LoadImmediate encounter a label, this is what they call.
   :ReadLabel_Init.
-@ 22 ; &label
+@ :&label.
 M = 0&D
 @ :ReadLabel.
 D = 0|A
-@ 3 ; &state
+@ :&state.
 M = 0|D
 ; fall through to ReadLabel
 
@@ -814,7 +814,7 @@ M = 0|D
 ; either writes it to the symbol table (first pass) or replaces it with the
 ; value bound to it and calls LoadImmediate_ResolveSymbol (second pass).
   :ReadLabel.
-@ 0 ; &char
+@ :&char.
 D = 0|M
 @ 56 ; '.'
 D = D-A
@@ -823,13 +823,13 @@ D = D-A
 ; Not at end, so add the just-read character to the label hash. Any non-whitespace
 ; non-. character is valid.
 ; First, double the existing hash to shift left 1 bit.
-@ 22 ; &label
+@ :&label.
 D = 0|M
 D = D+M
 ; Then add the new character to it.
-@ 0 ; &char
+@ :&char.
 D = D+M
-@ 22 ; &label
+@ :&label.
 M = 0|D
 ; return to main loop
 @ :MainLoop.
@@ -838,7 +838,7 @@ M = 0|D
 ; This is called when ReadLabel reads the terminating '.'. It looks at pass to
 ; determine whether to call ReadLabel_Bind or ReadLabel_Resolve.
   :ReadLabel_Done.
-@ 20 ; &pass
+@ :&pass.
 D = 0|M
 ; pass=0? we're still building the symbol table, call bind.
 @ :ReadLabel_Bind.
@@ -851,22 +851,22 @@ D = 0|M
 ; counter value.
   :ReadLabel_Bind.
 ; First, write the current value of label to *last_sym
-@ 22 ; &label
+@ :&label.
 D = 0|M
-@ 377 ; &last_sym
+@ :&last_sym.
 A = 0|M
 M = 0|D
 ; increment last_sym so it points to the value slot
-@ 377 ; &last_sym
+@ :&last_sym.
 M = M+1
 ; Write PC to that slot
-@ 21 ; &pc
+@ :&pc.
 D = 0|M
-@ 377 ; &last_sym
+@ :&last_sym.
 A = 0|M
 M = 0|D
 ; increment last_sym again
-@ 377 ; &last_sym
+@ :&last_sym.
 M = M+1
 ; done binding, return to main loop
 @ :MainLoop.
@@ -879,28 +879,28 @@ M = M+1
 ; with the associated value; it will then be output at the end of the line.
   :ReadLabel_Resolve.
 ; Startup code - set this_sym = &symbols
-@ 400 ; &symbols
+@ :&symbols.
 D = 0|A
-@ 376 ; &this_sym
+@ :&this_sym.
 M = 0|D
   :ReadLabel_Resolve_Loop.
 ; Are we at the end of the symbol table? If so, error out.
-@ 377 ; &last_sym
+@ :&last_sym.
 D = 0|M
-@ 376 ; &this_sym
+@ :&this_sym.
 D = D-M
 @ :Error.
 = 0|D =
 ; Check if the current symbol is the one we're looking for.
-@ 376 ; &this_sym
+@ :&this_sym.
 A = 0|M ; fixed?
 D = 0|M
-@ 22 ; &label
+@ :&label.
 D = D-M
 @ :ReadLabel_Resolve_Success.
 = 0|D =
 ; It wasn't :( Advance this_sym by two to point to the next entry, and loop.
-@ 376 ; &this_sym
+@ :&this_sym.
 M = M+1
 M = M+1
 @ :ReadLabel_Resolve_Loop.
@@ -910,11 +910,11 @@ M = M+1
 ; a pointer to the label cell of the entry, so we need to inc it to get the
 ; value cell.
   :ReadLabel_Resolve_Success.
-@ 376 ; &this_sym
+@ :&this_sym.
 A = M+1
 D = 0|M
 ; now write the value into the opcode global
-@ 1 ; &opcode
+@ :&opcode.
 M = 0|D
 ; At the moment this routine is only called when resolving a label as part of a
 ; LoadImmediate instruction, so that's all we need to do.
@@ -923,7 +923,7 @@ M = 0|D
 ; abort the run.
 @ :Error.
 D = 0|A
-@ 3 ; &state
+@ :&state.
 M = 0|D
 @ :MainLoop.
 = 0|D <=>
