@@ -41,16 +41,44 @@ end
 -- Turn an opcode into a human-readable string
 local function op_to_str(op)
   if not op.ci then
-    return string.format('%04X [A=%d]', op.opcode, op.opcode)
+    return string.format('%04X [A = %d]', op.opcode, op.opcode)
   end
 
-  local alu = {[0] = '&', '|', '^', '~', '+', '++', '-', '--'}
-  local jmp = {'JGT', 'JEQ', 'JGE', 'JLT', 'JNE', 'JLE', 'JMP'}
-  local s = { 'alu:'..alu[op.alu] }
-  for _,field in ipairs { 'mr', 'zx', 'sw', 'a', 'd', 'm' } do
-    if op[field] == true then table.insert(s, field) end
+  local s = {}
+
+  -- for _,field in ipairs { 'mr', 'zx', 'sw', 'a', 'd', 'm' } do
+  --   if op[field] == true then table.insert(s, field) end
+  -- end
+
+  local dst = ''
+  if op.a then dst = dst..'A' end
+  if op.d then dst = dst..'D' end
+  if op.m then dst = dst..'M' end
+  if #dst > 0 then
+    table.insert(s, dst)
+    table.insert(s, '=')
   end
-  table.insert(s, jmp[(op.lt and 4 or 0) + (op.eq and 2 or 0) + (op.gt and 1 or 0)])
+
+  local alu = {[0] = '&', '|', '^', '!', '+', '+1', '-', '-1'}
+  alu = alu[op.alu]
+
+  local X = 'D'
+  local Y = 'A'
+  if op.mr then Y = 'M' end
+  if op.sw then X,Y = Y,X end
+  if op.zx then X = '0' end
+  table.insert(s, X)
+  table.insert(s, alu)
+  table.insert(s, Y)
+
+
+  local jmp = {'JGT', 'JEQ', 'JGE', 'JLT', 'JNE', 'JLE', 'JMP'}
+  jmp = jmp[(op.lt and 4 or 0) + (op.eq and 2 or 0) + (op.gt and 1 or 0)]
+  if #table > 0 and jmp then
+    table.insert(s, ';')
+  end
+  table.insert(s, jmp)
+
   return string.format("%04X [%s]", op.opcode, table.concat(s, " "))
 end
 
