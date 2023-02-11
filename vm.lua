@@ -112,7 +112,10 @@ function vm:dispatch(op)
   if op.d then self.D = R end
   if op.m then self:ram_write(A, R) end
   -- if jump bits are set, jmp
-  if (R < 0 and op.lt) or (R == 0 and op.eq) or (R > 0 and op.gt) then
+  -- note that the & 0xFFFF above means the result will always be positive,
+  -- since lua is not 16-bit -- so we check the high bit explicitly here.
+  local negative = bit.band(R, 0x8000) ~= 0
+  if (negative and op.lt) or (R == 0 and op.eq) or (R ~= 0 and not negative and op.gt) then
     self.PC = A
   end
 end
