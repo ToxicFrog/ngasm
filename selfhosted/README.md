@@ -63,3 +63,14 @@ the source code was read, using the function:
 The shift makes it ordering-sensitive (so that `foo` and `oof` won't have the
 same hash) but also means that when hashing symbols longer than 16 characters,
 only the last 16 will affect the hash.
+
+# 03 - Label Refactoring
+
+This has the same behaviour as stage 2, but rewrites the code to make use of
+labels, replacing hard-coded jump targets. This means I can finally rearrange
+the source code without worrying about recalculating my jumps!
+
+It also uses labels as ersatz defines, for variable addresses where we don't
+care exactly where in memory they reside, just that they have unique addresses.
+Since the assembler still outputs 1 instruction per line, even on blank lines,
+each label will have a unique address.
