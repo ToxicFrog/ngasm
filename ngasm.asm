@@ -275,31 +275,60 @@ D = 0|M
 ;; LoadImmediate state                                                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; This is called immediately after LineStart sees an @. If it sees a :, it passes
-; control to LoadImmediate_Label to read the label. Otherwise it passes control
-; to LoadImmediate_Constant to read an octal number.
+; This is called immediately after LineStart sees an @. It dispatches on the
+; first character it sees; a :, &, or # means a symbol reference which must be
+; resolved using the symbol table, a ' means a character constant, a $ means a
+; hexadecimal constant, and anything else means a decimal constant.
   :LoadImmediate.
+; First, check for ':', '&', and '#'. These all use LoadImmediate_Symbol to
+; resolve a symbol into a value.
 @ :&char.
 D = 0|M
 @ 72 ; ':'
 D = D-A
-@ :LoadImmediate_Label.
+@ :LoadImmediate_Symbol.
 = 0|D =
-; No label? Transfer control to LoadImmediate_Constant instead, and call it immediately to process the first digit.
-@ :LoadImmediate_Constant.
+@ :&char.
+D = 0|M
+@ 43 ; '#'
+D = D-A
+@ :LoadImmediate_Symbol.
+= 0|D =
+@ :&char.
+D = 0|M
+@ 46 ; '&'
+D = D-A
+@ :LoadImmediate_Symbol.
+= 0|D =
+; Now check for a character constant.
+@ :&char.
+D = 0|M
+@ 47 ; "'"
+D = D-A
+@ :LoadImmediate_Character.
+= 0|D =
+; Not a symbol or a character, so maybe it's a hex constant starting with $...
+@ :&char.
+D = 0|M
+@ 44 ; '$'
+D = D-A
+@ :LoadImmediate_HexConstant.
+= 0|D =
+; None of the above? Assume it's a decimal constant
+@ :LoadImmediate_DecConstant.
 D = 0|A
 @ :&state.
 M = 0|D
-@ :LoadImmediate_Constant.
+@ :LoadImmediate_DecConstant.
 = 0|D <=>
 
-; This becomes the active state after LoadImmediate sees a :. It is responsible
-; for processing the label character by character into &label.
-  :LoadImmediate_Label.
+; This becomes the active state when LoadImmediate sees a :, #, or &, denoting
+; a symbol reference that must be resolved.
+  :LoadImmediate_Symbol.
 ; First set ourself as the current state, so that it doesn't go through
 ; LoadImmediate above when it sees the next character and end up flopping
 ; between label and constant mode.
-@ :LoadImmediate_Label.
+@ :LoadImmediate_Symbol.
 D = 0|A
 @ :&state.
 M = 0+D
@@ -318,22 +347,127 @@ D = 0|M
 @ :ReadLabel_Init.
 = 0|D <=>
 
-; The state for reading the number in a load immediate instruction.
-; The number is octal, so for each digit, we multiply the existing number by
-; 8 (by repeated doubling via self-adding) and then add the new digit to it.
-  :LoadImmediate_Constant.
+; The state for reading a character constant. Character constants have the
+; format 'x and scan as the character code for x, so (e.g.) 'a is 97.
+  :LoadImmediate_Character.
+; Set ourself as the current state first
+@ :LoadImmediate_Character.
+D = 0|A
+@ :&state.
+M = 0+D
+; Then just copy char to opcode, easy.
+@ :&char.
+D = 0|M
+@ :&opcode.
+M = 0+D
+@ :MainLoop.
+= 0|D <=>
+
+; Called by LoadImmediate on encountering the leading $ of a hex constant.
+; Unlike DecimalConstant we don't want to ingest the first character of the
+; constant (since $ is not a digit), so we just set ReadDigit as the current
+; state and return to the main loop, which will start feeding it characters
+; starting with the *next* character.
+  :LoadImmediate_HexConstant.
+@ :LoadImmediate_HexConstant_ReadDigit.
+D = 0|A
+@ :&state.
+M = 0+D
+@ :MainLoop.
+= 0|D <=>
+
+; The state for reading a hex constant. This is equivalent to a decimal constant
+; except that (a) we multiply by 16 instead of by 10 each digit and (b) we understand
+; the digits A-F and a-f as corresponding to the values 10-15.
+  :LoadImmediate_HexConstant_ReadDigit.
 ; Start by making room in the opcode
 @ :&opcode.
 D = 0|M
+; Add D to M 15 times for a total of x16
 M = D+M
-D = 0|M
 M = D+M
-D = 0|M
 M = D+M
-; Opcode has now been multiplied by 8, add the next digit.
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+; Now we branch off depending on whether we have an a-f, A-F, or 0-9
+; really simple checks here (no error catchment): if it's >= a we have a-f,
+; otherwise if it's >= A we have A-F, otherwise it's 0-9.
 @ :&char.
 D = 0|M
-; Subtract '0' to get a value in the range 0-7
+@ 141 ; 'a'
+D = D-A
+@ :LoadImmediate_HexLowercase.
+= 0|D >=
+@ :&char.
+D = 0|M
+@ 101 ; 'A'
+D = D-A
+@ :LoadImmediate_HexUppercase.
+= 0|D >=
+@ :LoadImmediate_HexNumericDigit.
+= 0|D <=>
+
+  :LoadImmediate_HexLowercase.
+@ :&char.
+D = 0|M
+@ 127 ; 'a' - 10
+D = D-A
+@ :&opcode.
+M = D+M
+@ :MainLoop.
+= 0|D <=>
+
+  :LoadImmediate_HexUppercase.
+@ :&char.
+D = 0|M
+@ 67 ; 'A' - 10
+D = D-A
+@ :&opcode.
+M = D+M
+@ :MainLoop.
+= 0|D <=>
+
+  :LoadImmediate_HexNumericDigit.
+@ :&char.
+D = 0|M
+@ 60 ; '0'
+D = D-A
+@ :&opcode.
+M = D+M
+@ :MainLoop.
+= 0|D <=>
+
+; The state for reading the number in a load immediate instruction.
+; The number is decimal, so for each digit, we multiply the existing number by
+; 10 by repeated addition, then add the new digit to it.
+  :LoadImmediate_DecConstant.
+; Start by making room in the opcode
+@ :&opcode.
+D = 0|M
+; Add D to M 9 times for a total of x10
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+; Now add the next digit
+@ :&char.
+D = 0|M
+; Subtract '0' to get a value in the range 0-9
 ; or out of the range if the user typed in some sort of garbage, oh well
 @ 60 ; '0'
 D = D-A

@@ -74,3 +74,26 @@ It also uses labels as ersatz defines, for variable addresses where we don't
 care exactly where in memory they reside, just that they have unique addresses.
 Since the assembler still outputs 1 instruction per line, even on blank lines,
 each label will have a unique address.
+
+# 04 - Defines and Syntax Tidying
+
+This is planned to bring a number of reader improvements:
+- decimal constants by default
+- $ff for hex constants
+- 'a for character constants
+- no terminating . needed on labels
+- &foo 1 and #foo 1 for arbitrary-value defines
+- strip nops from output
+
+# 06 - Macros
+
+This version will hopefully bring macro support, the ability the bind a symbol
+to a sequence of instructions. The first version will probably not support
+arguments, but that still gives us the starting rudiments of a stack:
+initsp pusha pushd popa popd add sub, the various logical operators, and
+possibly even versions of call/return that operate entirely from the stack
+rather than from arguments.
+
+# 08 - Stack Language
+
+Maybe we implement an itty bitty forth?
