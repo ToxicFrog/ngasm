@@ -8,6 +8,14 @@ assembler itself), while odd-numbered versions refactor or completely rewrite
 the assembler to take advantage of those new features without changing the actual
 functionality of the assembler.
 
+The three file types contained herein are:
+- `.asm`: the source code for that version of the assembler
+- `.hex`: the ROM image generated from the source code, in `xxd` format
+- `.md`: the documentation for that version of the assembler
+
+If a given version has no `.md` file, that means the behaviour, and thus the
+documentation, hasn't changed since the previous version.
+
 ## 00 - Simple Assembler (nandgame syntax)
 
 This is the first version of the assembler. It's designed to be straightforward
