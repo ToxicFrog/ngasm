@@ -1,7 +1,12 @@
-;;;; Assembler, stage 3 ;;;;
+;;;; Assembler, stage 4 ;;;;
 ;
-; This refactors the assembler to make use of the labels feature added in stage
-; 2. No functionality is changed but it should be easier to follow now.
+; This adds a number of new features:
+; - character constants
+; - decimal and hexadecimal constants (octal constants are removed)
+; ? constant definitions
+; ? labels no longer required to end with .
+; ? more compact output
+; ? macros?
 
 ; Globals
 ; Since each line outputs an instruction, we can use labels for our variables
@@ -170,12 +175,23 @@ M = M+1
 ;; End-of-line handling                                                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; Called at the end of every line. Checks pass to determine what it should do.
+; Called at the end of every line.
+; First, calls the current state with char=\0 to tell it that we've reached EOL;
+; states which cannot appear at EOL will react by calling Error, other states
+; should do whatever cleanup they need to do and then call EndOfLine_Continue.
+  :EndOfLine.
+@ :&char.
+M = 0&D
+@ :&state.
+A = 0|M
+= 0|D <=>
+
+; Called after state cleanup, and checks pass to know what to do.
 ; In pass 0, it increments pc so that we know what addresses to associate with
 ; labels when we encounter them; in pass 1 it actually emits code.
 ; In either case it calls NewInstruction afterwards to reset the parser state,
 ; opcode buffer, etc.
-  :EndOfLine.
+  :EndOfLine_Continue.
 ; If pass == 0, call _FirstPass, else _SecondPass.
 @ :&pass.
 D = 0|M
@@ -218,6 +234,11 @@ M = 0|D
 ; comments. (Actual uses of labels once defined are always as part of an @
 ; load immediate instruction, so those are handled in LoadImmediate.)
   :LineStart.
+; Check if we're at end of line, if so just do nothing
+@ :&char.
+D = 0|M
+@ :EndOfLine_Continue.
+= 0|D =
 ; Is it an @? If so this is a load immediate A opcode.
 @ :&char.
 D = 0|M
@@ -332,6 +353,11 @@ M = 0|D
 D = 0|A
 @ :&state.
 M = 0+D
+; If char is 0 we're at EOL and have nothing further to do
+@ :&char.
+D = 0|M
+@ :EndOfLine_Continue.
+= 0|D =
 ; If we're on the first pass, we aren't guaranteed to have bindings for these
 ; symbols yet, but we also aren't generating code yet, so just ignore every
 ; character we're passed and jump back to MainLoop.
@@ -355,7 +381,12 @@ D = 0|M
 D = 0|A
 @ :&state.
 M = 0+D
-; Then just copy char to opcode, easy.
+; If char is 0 we're at EOL and have nothing further to do
+@ :&char.
+D = 0|M
+@ :EndOfLine_Continue.
+= 0|D =
+; Otherwise just copy char into opcode
 @ :&char.
 D = 0|M
 @ :&opcode.
@@ -380,6 +411,11 @@ M = 0+D
 ; except that (a) we multiply by 16 instead of by 10 each digit and (b) we understand
 ; the digits A-F and a-f as corresponding to the values 10-15.
   :LoadImmediate_HexConstant_ReadDigit.
+; Check if we're at end of line, if so just do nothing
+@ :&char.
+D = 0|M
+@ :EndOfLine_Continue.
+= 0|D =
 ; Start by making room in the opcode
 @ :&opcode.
 D = 0|M
@@ -451,6 +487,11 @@ M = D+M
 ; The number is decimal, so for each digit, we multiply the existing number by
 ; 10 by repeated addition, then add the new digit to it.
   :LoadImmediate_DecConstant.
+; Check if we're at end of line, if so just do nothing
+@ :&char.
+D = 0|M
+@ :EndOfLine_Continue.
+= 0|D =
 ; Start by making room in the opcode
 @ :&opcode.
 D = 0|M
@@ -781,6 +822,12 @@ D = 0|M
 D = D-A
 @ :RHS_One.
 = 0|D =
+; If char is \0 we're at end of line, no special cleanup needed so just continue
+; EOL handling.
+@ :&char.
+D = 0|M
+@ :EndOfLine_Continue.
+= 0|D =
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
 @ :Error.
@@ -856,6 +903,12 @@ D = 0|M
 D = D-A
 @ :Jump_GT.
 = 0|D =
+; If char is \0 we're at end of line, no special cleanup needed so just continue
+; EOL handling.
+@ :&char.
+D = 0|M
+@ :EndOfLine_Continue.
+= 0|D =
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
 @ :Error.
@@ -891,7 +944,7 @@ M = D | M
 
 ; Error state. Write a single zero byte to the output so that external tools can
 ; tell something went wrong, since the output will have an odd number of bytes
-; in it.l
+; in it.
 ; Someday we should have a way to reopen and thus erase the file.
   :Error.
 @ 77771 ; &stdout_bytes
@@ -947,7 +1000,12 @@ M = 0|D
 ; for reading the label into the label variable. Upon finishing the read, it
 ; either writes it to the symbol table (first pass) or replaces it with the
 ; value bound to it and calls LoadImmediate_ResolveSymbol (second pass).
+; Check if we're at end of line, if so just do nothing
   :ReadLabel.
+@ :&char.
+D = 0|M
+@ :EndOfLine_Continue.
+= 0|D =
 @ :&char.
 D = 0|M
 @ 56 ; '.'
@@ -1052,12 +1110,14 @@ D = 0|M
 M = 0|D
 ; At the moment this routine is only called when resolving a label as part of a
 ; LoadImmediate instruction, so that's all we need to do.
-; As one final check, set the current state to Error -- if there is any more
-; code on this line after the label, that is VERBOTEN and we will properly
-; abort the run.
-@ :Error.
+; Set the current state to NoOp below so nothing happens at EOL.
+@ :NoOpState.
 D = 0|A
 @ :&state.
 M = 0|D
 @ :MainLoop.
+= 0|D <=>
+
+  :NoOpState.
+@ :EndOfLine_Continue.
 = 0|D <=>
