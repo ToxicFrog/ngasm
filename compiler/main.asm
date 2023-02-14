@@ -5,58 +5,7 @@
 ; - decimal and hexadecimal constants (octal constants are removed)
 ; ? constant definitions
 ; ? labels no longer required to end with .
-; ? more compact output
 ; ? macros?
-
-; Globals
-; Since each line outputs an instruction, we can use labels for our variables
-; as well. In the future we'll have define but this works in the meantime.
-; The convention used here is:
-; - variable addresses start with :&
-; - constants that are not memory addresses with :#
-; - jump labels with plain :
-
-; Most recently read character
-:&char.
-; Opcode under construction
-:&opcode.
-; True if we are in read-and-discard-comment mode
-:&in_comment.
-; Pointer to current state
-:&state.
-
-; Whether we're on the first pass (0) or the second pass (1).
-; There are more elegant ways to do this but I can implement those once we have
-; label support working. :)
-:&pass.
-
-; Program counter. Used to generate labels.
-:&pc.
-
-; Hash of current label. Filled in by states that read labels in the source code
-; and used by routines that commit or look up labels.
-:&label.
-
-; Pointer just past the end of the symbol table. To write a new symbol we put
-; it here and then increment this pointer. When resolving a symbol, if we reach
-; this point, we've gone too far.
-:&last_sym.
-; Pointer to the current symbol we are looking at. Used during symbol resolution
-; as scratch space.
-:&this_sym.
-
-; The actual table. The table is an array of [symbol_hash, value] pairs
-; occupying two words each and stored contiguously in memory.
-; This goes last since it will grow as new symbols are added and we don't want
-; it overwriting something else!
-:&symbols.
-
-; Memory-mapped IO we still need to hard-code until we have define, using labels
-; as variables only works for stuff where we don't care exactly where it ends up.
-;DEFINE &stdin_status 0x7FF0
-;DEFINE &stdin 0x7FF1
-;DEFINE &stdout_bytes 0x7FF9
-;DEFINE &stdout 0x7FFA
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialization                                                             ;;
@@ -226,6 +175,7 @@ M = 0|D
 ; Its job is to decide, based on that character, what sort of line this is:
 ;   @ means that it's a load immediate instruction
 ;   : means that it's a label definition
+;   & or # means that it's a constant definition
 ;   anything else means a compute instruction
 ; Label definitions have special handling based on the pass. If we're in pass 0,
 ; it transfers control to ReadLabel for the rest of the line, which will read in
