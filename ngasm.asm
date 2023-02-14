@@ -254,6 +254,21 @@ D = 0|M
 D = D-A
 @ :LineStart_Label.
 = 0|D =
+; If it's a &, this is a constant definition - we need to read the label, then
+; the value.
+@ :&char.
+D = 0|M
+@ 46 ; '&'
+D = D-A
+@ :LineStart_Constant.
+= 0|D =
+; Same deal with # as with &.
+@ :&char.
+D = 0|M
+@ 43 ; '#'
+D = D-A
+@ :LineStart_Constant.
+= 0|D =
 ; None of the above match.
 ; It's the start of a compute instruction. The first character is already going
 ; to be significant, so we need to set the current state to Destination and then
@@ -291,6 +306,10 @@ D = 0|M
 ; knowing that we're on the first pass, create a new symbol table entry for it.
 @ :ReadLabel_Init.
 = 0|D <=>
+
+; Called when the line starts with & or #, denoting a constant definition.
+  :LineStart_Constant.
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; LoadImmediate state                                                        ;;
@@ -1027,6 +1046,16 @@ M = 0|D
 @ :MainLoop.
 = 0|D <=>
 
+; TODO: need to rework ReadLabel_Bind so that we can either bind the current
+; location or bind a user-provided value. This probably means abstracting
+; out ReadConstant or at least adding a caller-configured jump at the end so that
+; we have a choice of:
+; LoadImmediate -> ReadConstant -> Eol
+; LoadImmediate -> ReadSymbol -> ReadSymbol_Resolve -> ErrorIfNotEol
+; DefineLabel -> ReadSymbol -> ReadSymbol_BindPC -> ErrorIfNotEol
+; DefineConstant -> ReadSymbol -> ReadConstant -> ReadSymbol_BindConstant -> ErrorIfNotEol
+; or so
+; I think I need graph paper for this
 ; This is called when ReadLabel reads the terminating '.'. It looks at pass to
 ; determine whether to call ReadLabel_Bind or ReadLabel_Resolve.
   :ReadLabel_Done.
