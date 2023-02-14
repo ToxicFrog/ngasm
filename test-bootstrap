@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+#
+# Quick and dirty bootstrap test script.
+# First, uses ngasm.hex (the current known good ROM)
+# to compile ngasm.asm (the work in progress assembler)
+# and produce next.hex
+# Then it uses next.hex to compile test.asm, which should
+# contain test code.
+
+# Run the assembler the VM.
+# Usage: ngasm input.asm output.bin
+# To get a .hex file, just run the output through xxd, either post hoc or
+# like so:
+# $ ngasm input.asm /dev/stdout | xxd > output.hex
+
+ROM=${ROM:=ngasm.hex}
+MODE=${MODE:=run}
+
+cat compiler/*.asm > ngasm.asm
+
+luajit main.lua "flash $ROM" "file ngasm.asm 0x7FF0" "file /dev/stdout 0x7FF8 wb" "run" | xxd > next.hex
+if (( ($(xxd -r next.hex | wc -c) % 2) == 1 )); then
+  echo "!! Error compiling next.hex !!"
+  tail -n45 next.hex
+  exit 1
+fi
+
+if [[ $MODE == run ]]; then
+  luajit main.lua "flash next.hex" "file test.asm 0x7FF0" "file /dev/stdout 0x7FF8 wb" run | xxd
+else
+  luajit main.lua "flash next.hex" "file test.asm 0x7FF0" "file /dev/null 0x7FF8 wb" "$MODE"
+fi
