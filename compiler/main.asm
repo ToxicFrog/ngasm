@@ -252,14 +252,39 @@ D = 0|M
 @ :CommentStart.
 = 0|D <>
 ; On pass 0, we need to actually read in the label and associate a value with it.
-; ReadLabel_Init will initialize the label reader, read in the label, and,
-; knowing that we're on the first pass, create a new symbol table entry for it.
-@ :ReadLabel_Init.
+; Sym_Read will take over the state machine until it's done reading in the
+; label, then call sym_next, which we will point at BindPC to associate the
+; label with the current program counter.
+@ :BindPC.
+D = 0|M
+@ :&sym_next.
+M = 0|D
+@ :Sym_Read.
 = 0|D <=>
 
 ; Called when the line starts with & or #, denoting a constant definition.
   :LineStart_Constant.
 
+; Called when we have successfully read in a label definition. This should in
+; practice be called at end of line via Sym_Read, so char=\0 and EndOfLine_Continue
+; is waiting for us.
+; So, we need to:
+; - set sym_next to EndOfLine_Continue, so Sym_Bind jumps straight there
+;   once we're done
+; - copy PC into sym_value and then call Sym_Bind.
+  :BindPC.
+; set up sym_next
+@ :EndOfLine_Continue.
+D = 0|A
+@ :&sym_next.
+M = 0|D
+; set up PC
+@ :&pc.
+D = 0|M
+@ :&sym_value.
+M = 0|D
+@ :Sym_Bind.
+= 0|D <=>
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; LoadImmediate state                                                        ;;
@@ -312,34 +337,42 @@ M = 0|D
 @ :LoadImmediate_DecConstant.
 = 0|D <=>
 
-; This becomes the active state when LoadImmediate sees a :, #, or &, denoting
-; a symbol reference that must be resolved.
+; This is called when LoadImmediate sees the start of a symbol reference.
+; It uses Sym_Read to read in the symbol, then Sym_Resolve to get the actual
+; value it needs to emit.
   :LoadImmediate_Symbol.
-; First set ourself as the current state, so that it doesn't go through
-; LoadImmediate above when it sees the next character and end up flopping
-; between label and constant mode.
-@ :LoadImmediate_Symbol.
-D = 0|A
-@ :&state.
-M = 0+D
-; If char is 0 we're at EOL and have nothing further to do
-@ :&char.
+@ :LoadImmediate_Symbol_DoResolve.
+D = 0|M
+@ :&sym_next.
+M = 0|D
+@ :Sym_Read.
+= 0|D <=>
+
+; Called immediately after the above. Performs resolution of the just-ingested
+; symbol -- on the second pass. On the first pass it just ignores the result
+; and jumps to EndOfLine_Continue (since this should only be called at EOL).
+  :LoadImmediate_Symbol_DoResolve.
+@ :&pass.
 D = 0|M
 @ :EndOfLine_Continue.
 = 0|D =
-; If we're on the first pass, we aren't guaranteed to have bindings for these
-; symbols yet, but we also aren't generating code yet, so just ignore every
-; character we're passed and jump back to MainLoop.
-@ :&pass.
+@ :LoadImmediate_Symbol_ResolveDone.
 D = 0|M
-@ :MainLoop.
-= 0|D =
-; We're on pass 1. We need to actually resolve the symbol.
-; ReadLabel_Init will initialize the label reader and set it as the current
-; state. When it's done reading the label it will (knowing that it's on pass 1)
-; leave the associated value in the opcode buffer, and EndOfLine will handle
-; outputting it.
-@ :ReadLabel_Init.
+@ :&sym_next.
+M = 0|D
+@ :Sym_Resolve.
+= 0|D <=>
+
+; Called after symbol resolution completes. Writes the value of the resolved
+; symbol into the opcode buffer.
+  :LoadImmediate_Symbol_ResolveDone.
+@ :&sym_value.
+D = 0|M
+@ :&opcode.
+M = 0|D
+; and since, again, this should only be called at EOL, we return control to
+; the end of line handler.
+@ :EndOfLine_Continue.
 = 0|D <=>
 
 ; The state for reading a character constant. Character constants have the
@@ -925,10 +958,6 @@ M = 0&A
 @ 77777
 = 0|D <=>
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Label support                                                              ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 ; To support labels we need a number of new features:
 ; - understanding ":foo." as defining a label foo at the address at which it occurs
 ; - understanding "@ :foo." as loading A with the value recorded for the label foo
@@ -947,156 +976,3 @@ M = 0&A
 ; - upon seeing a label definition, ignore it;
 ; - upon seeing a label reference, look it up in the symbol table.
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Label reading                                                              ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; This is a preamble to ReadLabel (below). It sets the state pointer to
-; ReadLabel so future inputs will be directed to it, and clears the label
-; variable so we can start reading into it.
-; When LineStart or LoadImmediate encounter a label, this is what they call.
-  :ReadLabel_Init.
-@ :&label.
-M = 0&D
-@ :ReadLabel.
-D = 0|A
-@ :&state.
-M = 0|D
-; fall through to ReadLabel
-
-; This state is entered when the program encounters a label in a location where
-; one is expected, i.e. a label definition or LoadImmediate. It is responsible
-; for reading the label into the label variable. Upon finishing the read, it
-; either writes it to the symbol table (first pass) or replaces it with the
-; value bound to it and calls LoadImmediate_ResolveSymbol (second pass).
-; Check if we're at end of line, if so just do nothing
-  :ReadLabel.
-@ :&char.
-D = 0|M
-@ :EndOfLine_Continue.
-= 0|D =
-@ :&char.
-D = 0|M
-@ 56 ; '.'
-D = D-A
-@ :ReadLabel_Done.
-= 0|D =
-; Not at end, so add the just-read character to the label hash. Any non-whitespace
-; non-. character is valid.
-; First, double the existing hash to shift left 1 bit.
-@ :&label.
-D = 0|M
-D = D+M
-; Then add the new character to it.
-@ :&char.
-D = D+M
-@ :&label.
-M = 0|D
-; return to main loop
-@ :MainLoop.
-= 0|D <=>
-
-; TODO: need to rework ReadLabel_Bind so that we can either bind the current
-; location or bind a user-provided value. This probably means abstracting
-; out ReadConstant or at least adding a caller-configured jump at the end so that
-; we have a choice of:
-; LoadImmediate -> ReadConstant -> Eol
-; LoadImmediate -> ReadSymbol -> ReadSymbol_Resolve -> ErrorIfNotEol
-; DefineLabel -> ReadSymbol -> ReadSymbol_BindPC -> ErrorIfNotEol
-; DefineConstant -> ReadSymbol -> ReadConstant -> ReadSymbol_BindConstant -> ErrorIfNotEol
-; or so
-; I think I need graph paper for this
-; This is called when ReadLabel reads the terminating '.'. It looks at pass to
-; determine whether to call ReadLabel_Bind or ReadLabel_Resolve.
-  :ReadLabel_Done.
-@ :&pass.
-D = 0|M
-; pass=0? we're still building the symbol table, call bind.
-@ :ReadLabel_Bind.
-= 0|D =
-; else call resolve
-@ :ReadLabel_Resolve.
-= 0|D <=>
-
-; This is called to bind a new entry in the symbol table to the current program
-; counter value.
-  :ReadLabel_Bind.
-; First, write the current value of label to *last_sym
-@ :&label.
-D = 0|M
-@ :&last_sym.
-A = 0|M
-M = 0|D
-; increment last_sym so it points to the value slot
-@ :&last_sym.
-M = M+1
-; Write PC to that slot
-@ :&pc.
-D = 0|M
-@ :&last_sym.
-A = 0|M
-M = 0|D
-; increment last_sym again
-@ :&last_sym.
-M = M+1
-; done binding, return to main loop
-@ :MainLoop.
-= 0|D <=>
-
-; This is called when resolving a symbol.
-; It is reached when the program sees a @ (load immediate) followed by a label.
-; At this point, ReadLabel proper is done and the label hash is stored in label.
-; We need to scan the symbol table for the label and overwrite the opcode global
-; with the associated value; it will then be output at the end of the line.
-  :ReadLabel_Resolve.
-; Startup code - set this_sym = &symbols
-@ :&symbols.
-D = 0|A
-@ :&this_sym.
-M = 0|D
-  :ReadLabel_Resolve_Loop.
-; Are we at the end of the symbol table? If so, error out.
-@ :&last_sym.
-D = 0|M
-@ :&this_sym.
-D = D-M
-@ :Error.
-= 0|D =
-; Check if the current symbol is the one we're looking for.
-@ :&this_sym.
-A = 0|M ; fixed?
-D = 0|M
-@ :&label.
-D = D-M
-@ :ReadLabel_Resolve_Success.
-= 0|D =
-; It wasn't :( Advance this_sym by two to point to the next entry, and loop.
-@ :&this_sym.
-M = M+1
-M = M+1
-@ :ReadLabel_Resolve_Loop.
-= 0|D <=>
-
-; Called when we successfully find an entry in the symbol table. this_sym holds
-; a pointer to the label cell of the entry, so we need to inc it to get the
-; value cell.
-  :ReadLabel_Resolve_Success.
-@ :&this_sym.
-A = M+1
-D = 0|M
-; now write the value into the opcode global
-@ :&opcode.
-M = 0|D
-; At the moment this routine is only called when resolving a label as part of a
-; LoadImmediate instruction, so that's all we need to do.
-; Set the current state to NoOp below so nothing happens at EOL.
-@ :NoOpState.
-D = 0|A
-@ :&state.
-M = 0|D
-@ :MainLoop.
-= 0|D <=>
-
-  :NoOpState.
-@ :EndOfLine_Continue.
-= 0|D <=>

@@ -29,24 +29,6 @@
 ; Program counter. Used to generate labels.
 :&pc.
 
-; Hash of current label. Filled in by states that read labels in the source code
-; and used by routines that commit or look up labels.
-:&label.
-
-; Pointer just past the end of the symbol table. To write a new symbol we put
-; it here and then increment this pointer. When resolving a symbol, if we reach
-; this point, we've gone too far.
-:&last_sym.
-; Pointer to the current symbol we are looking at. Used during symbol resolution
-; as scratch space.
-:&this_sym.
-
-; The actual table. The table is an array of [symbol_hash, value] pairs
-; occupying two words each and stored contiguously in memory.
-; This goes last since it will grow as new symbols are added and we don't want
-; it overwriting something else!
-:&symbols.
-
 ; Memory-mapped IO we still need to hard-code until we have define, using labels
 ; as variables only works for stuff where we don't care exactly where it ends up.
 ;DEFINE &stdin_status 0x7FF0
