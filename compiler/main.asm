@@ -276,7 +276,42 @@ M = 0|D
 = 0|D <=>
 
 ; Called when the line starts with & or #, denoting a constant definition.
+; We need to call Sym_Read to read the symbol hash into &symbol, then Val_Read
+; to read the value into &value, then copy &value to &sym_value and call Sym_Bind
+; to commit the binding.
+; Sym_Read will end when it's passed an = by the main loop, which is still going
+; to be in the char buffer, but it's safe to call Val_Read next because it only
+; sets up the state and returns control.
+; Note that you cannot alias symbols, e.g. `#foo = #bar` is illegal and your
+; program will be frogs.
   :LineStart_Constant.
+@ :LineStart_Constant_ReadVal.
+D = 0|A
+@ :&sym_next.
+M = 0|D
+@ :Sym_Read.
+= 0|D <=>
+
+  :LineStart_Constant_ReadVal.
+@ :LineStart_Constant_Bind.
+D = 0|A
+@ :&val_next.
+M = 0|D
+@ :Val_Read.
+= 0|D <=>
+
+; sym_value = value; sym_next = EndOfLine_Continue; jmp Sym_Bind
+  :LineStart_Constant_Bind.
+@ :&value.
+D = 0|M
+@ :&sym_value.
+M = 0|D
+@ :EndOfLine_Continue.
+D = 0|A
+@ :&sym_next.
+M = 0|D
+@ :Sym_Bind.
+= 0|D <=>
 
 ; Called when we have successfully read in a label definition. This should in
 ; practice be called at end of line via Sym_Read, so char=\0 and EndOfLine_Continue
