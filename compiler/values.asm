@@ -113,6 +113,7 @@ D = 0|M
 @ :&value.
 M = 0|D
 @ :&val_next.
+A = 0|M
 = 0|D <=>
 
 ; The state for reading a character constant. Character constants have the
@@ -126,12 +127,13 @@ M = 0+D
 ; If char is 0 we're at EOL and have nothing further to do
 @ :&char.
 D = 0|M
-@ :EndOfLine_Continue.
+@ :&val_next.
+A = 0|M
 = 0|D =
-; Otherwise just copy char into opcode
+; Otherwise just copy char into the value buffer
 @ :&char.
 D = 0|M
-@ :&opcode.
+@ :&value.
 M = 0+D
 @ :MainLoop.
 = 0|D <=>
@@ -156,10 +158,11 @@ M = 0+D
 ; Check if we're at end of line, if so just do nothing
 @ :&char.
 D = 0|M
-@ :EndOfLine_Continue.
+@ :&val_next.
+A = 0|M
 = 0|D =
-; Start by making room in the opcode
-@ :&opcode.
+; Start by making room in the value buffer
+@ :&value.
 D = 0|M
 ; Add D to M 15 times for a total of x16
 M = D+M
@@ -200,7 +203,7 @@ D = D-A
 D = 0|M
 @ 127 ; 'a' - 10
 D = D-A
-@ :&opcode.
+@ :&value.
 M = D+M
 @ :MainLoop.
 = 0|D <=>
@@ -210,7 +213,7 @@ M = D+M
 D = 0|M
 @ 67 ; 'A' - 10
 D = D-A
-@ :&opcode.
+@ :&value.
 M = D+M
 @ :MainLoop.
 = 0|D <=>
@@ -220,7 +223,7 @@ M = D+M
 D = 0|M
 @ 60 ; '0'
 D = D-A
-@ :&opcode.
+@ :&value.
 M = D+M
 @ :MainLoop.
 = 0|D <=>
@@ -239,10 +242,11 @@ M = 0+D
 ; Check if we're at end of line, if so just do nothing
 @ :&char.
 D = 0|M
-@ :EndOfLine_Continue.
+@ :&val_next.
+A = 0|M
 = 0|D =
-; Start by making room in the opcode
-@ :&opcode.
+; Start by making room in the value buffer
+@ :&value.
 D = 0|M
 ; Add D to M 9 times for a total of x10
 M = D+M
@@ -261,7 +265,7 @@ D = 0|M
 ; or out of the range if the user typed in some sort of garbage, oh well
 @ 60 ; '0'
 D = D-A
-@ :&opcode.
+@ :&value.
 M = D+M
 @ :MainLoop.
 = 0|D <=>
