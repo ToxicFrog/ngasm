@@ -6,9 +6,12 @@
 ;; - resolving symbols
 ;; This will be used for labels, constants, and macros.
 ;;
-;; This exposes one parser state (Sym_Read), two procedures (Sym_Bind and
-;; Sym_Resolve), and three variables (&symbol, &sym_value, and &sym_next).
-;; See below for details on how to use them.
+;; It exports three procedures:
+;; - Sym_Read, which activates a parser state for reading a symbol
+;; - Sym_Bind, which creates a new entry in the symbol table
+;; - Sym_Resolve, which looks up a symbol table entry
+;; And three variables: &symbol, &sym_value, and &sym_next.
+;; See the comments below for details on how to use these.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;; Public Variables ;;;;
@@ -174,6 +177,13 @@ A = 0|M
 ;   :MyState_ResolveDone
 ;   [code to do something with the resolved value]
   :Sym_Resolve.
+; If we're on the first pass, just skip the lookup entirely because the symbol
+; table hasn't been created yet.
+@ :&pass.
+D = 0|M
+@ :&sym_next.
+A = 0|M
+= 0|D =
 ; Startup code - set this_sym = &symbols
 @ :&symbols.
 D = 0|A
