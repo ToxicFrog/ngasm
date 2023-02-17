@@ -177,13 +177,6 @@ A = 0|M
 ;   :MyState_ResolveDone
 ;   [code to do something with the resolved value]
   :Sym_Resolve.
-; If we're on the first pass, just skip the lookup entirely because the symbol
-; table hasn't been created yet.
-@ :&pass.
-D = 0|M
-@ :&sym_next.
-A = 0|M
-= 0|D =
 ; Startup code - set this_sym = &symbols
 @ :&symbols.
 D = 0|A
@@ -195,7 +188,7 @@ M = 0|D
 D = 0|M
 @ :&this_sym.
 D = D-M
-@ :Error.
+@ :Sym_Resolve_Error.
 = 0|D =
 ; Check if the current symbol is the one we're looking for.
 @ :&this_sym.
@@ -225,4 +218,18 @@ M = 0|D
 ; return control to the caller
 @ :&sym_next.
 A = 0|M
+= 0|D <=>
+
+; Called when we cannot find the requested symbol in the table.
+; On pass 1 we may have just not seen the symbol definition yet, so instead we
+; return whatever is currently in sym_value.
+; On pass 2, we error out.
+  :Sym_Resolve_Error.
+@ :&pass.
+D = 0|M
+@ :&sym_next.
+A = 0|M
+= 0|D =
+; pass != 0, raise an error.
+@ :Error.
 = 0|D <=>
