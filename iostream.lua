@@ -11,6 +11,11 @@
 --      read: return the next 16-bit word from the file, MSB first.
 --      write: write a 16-bit word to the file, MSB first.
 
+local function debug(fmt, ...)
+  io.stderr:write(string.format(fmt..'\n', ...))
+  io.stderr:flush()
+end
+
 local bit = require "bit"
 
 local iostream = {}
@@ -45,6 +50,7 @@ end
 function iostream:write(address, data)
   if address == 0 then
     -- seek to offset
+    -- debug("seek: %d -> %d", self.fd:seek('cur', 0), data)
     self.fd:seek('set', data)
   elseif address == 1 then
     -- write byte
