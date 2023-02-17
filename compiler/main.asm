@@ -61,7 +61,19 @@ D = 0|M
 D = 0|M
 @ :&char.
 M = 0|D
+; Increment the fseek counter, unless we're inside a macroexpansion, in which
+; case fseek gets frozen so we know where to return to.
+@ :&in_macroexpansion.
+D = 0|M
+@ :MainLoop_SkipFseekIncrement.
+= 0|D <>
+  :MainLoop_IncrementFseek.
+@ :&fseek.
+M = M+1
+  :MainLoop_SkipFseekIncrement.
 ; If it's a newline, run the end-of-line routine.
+@ :&char.
+D = 0|M
 @ 12
 D = D - A
 @ :EndOfLine.
@@ -112,6 +124,12 @@ D = 0|M
 = 0|D >
 ; Otherwise, rewind stdin to start of file by writing a 0 to it
 @ 77760 ; &stdin_status
+M = 0&D
+; Reset the program counter to 0
+@ :&pc.
+M = 0&D
+; And the seek point
+@ :&fseek.
 M = 0&D
 ; Then increment pass and restart the main loop.
 @ :&pass.
@@ -218,6 +236,27 @@ D = 0|M
 @ 43 ; '#'
 D = D-A
 @ :LineStart_Constant.
+= 0|D =
+; If it's a [, this is the start of a macro definition.
+@ :&char.
+D = 0|M
+@ 133 ; '['
+D = D-A
+@ :Macro_Begin.
+= 0|D =
+; If it's a ], this is the end of a macro definition.
+@ :&char.
+D = 0|M
+@ 135 ; ']'
+D = D-A
+@ :Macro_End.
+= 0|D =
+; If it's a ~, this is a macro invokation
+@ :&char.
+D = 0|M
+@ 176 ; '~'
+D = D-A
+@ :Macro_Expand.
 = 0|D =
 ; None of the above match.
 ; It's the start of a compute instruction. The first character is already going

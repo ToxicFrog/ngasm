@@ -28,6 +28,8 @@
 
 ; Program counter. Used to generate labels.
 :&pc.
+; Offset in source file. Used to generate macros.
+:&fseek.
 
 ; Memory-mapped IO we still need to hard-code until we have define, using labels
 ; as variables only works for stuff where we don't care exactly where it ends up.
