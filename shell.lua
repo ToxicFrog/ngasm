@@ -139,6 +139,16 @@ function commands.flash.fn(CPU, path)
   end
 end
 
+command 'source' '</path/to/source.asm>' 'Load source code for debugging' [[
+  Loads the given file as the source code for the currently loaded ROM. In trace
+  mode, it will consult this file to attempt to figure out how to label offsets
+  in the ROM.
+]]
+function commands.source.fn(CPU, path)
+  CPU:source(path)
+  printf("Loaded %s as source code.", path)
+end
+
 command 'reset' '' 'Reset the emulator' [[
   Resets the CPU, reinitializing all memory and registers to 0. Does not
   clear ROM.

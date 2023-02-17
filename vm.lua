@@ -20,6 +20,8 @@ function vm.new()
     rom = {};
     -- peripherals
     dev = {};
+    -- debugging
+    sourcemap = {};
   }
 
   setmetatable(new_vm, vm)
@@ -49,6 +51,25 @@ function vm:flash(rom)
     self.rom = vmutil.string_to_words(rom)
   end
   return self
+end
+
+-- Load the given file as the source code for the loaded ROM.
+-- This will be used to display labels in trace mode.
+function vm:source(source)
+  local label = "(start)"
+  local label_addr = 0
+  local ir = 0
+  self.sourcemap = {}
+  for line in io.lines(source) do
+    if line:match('^%s*:.*') then
+      label = line:gsub('%s', ''):gsub(';.*', '')
+      label_addr = ir
+      self.sourcemap[ir] = '\x1B[1m'..label..'\x1B[0m'
+    else
+      self.sourcemap[ir] = label .. '+' .. (ir - label_addr)
+    end
+    ir = ir + 1
+  end
 end
 
 -- Run n steps of the VM. If n is omitted, run until program completion.
@@ -125,10 +146,11 @@ end
 function vm:__tostring()
   -- we use self.ram here rather than ram_read() because if A is pointing to
   -- an MMIO device we don't want to actuate it while printing the VM state!
-  return string.format("VM (CLK:%04X D:%04X A:%04X MEM:%04X PC:%04X IR:%s NEXT:%s)",
-    self.CLK, self.D, self.A, self.ram[self.A], self.PC,
+  return string.format("VM (IR:%-20s CLK:%04X D:%04X A:%04X MEM:%04X PC:%04X @ %s)",
     vmutil.decode(self.IR),
-    self.rom[self.PC] and vmutil.decode(self.rom[self.PC]) or '----')
+    self.CLK, self.D, self.A, self.ram[self.A], self.PC,
+    self.sourcemap[self.PC] or "(missing)")
+    --self.rom[self.PC] and vmutil.decode(self.rom[self.PC]) or '----')
 end
 
 -- Read RAM at the given address. This might return actual memory contents
