@@ -275,6 +275,27 @@ M = 0|D
 @ :Sym_Read.
 = 0|D <=>
 
+; Called when we have successfully read in a label definition. This should in
+; practice be called at end of line via Sym_Read, so char=\0 and EndOfLine_Continue
+; is waiting for us.
+; So, we need to:
+; - set sym_next to EndOfLine_Continue, so Sym_Bind jumps straight there
+;   once we're done
+; - copy PC into sym_value and then call Sym_Bind.
+  :BindPC.
+; set up sym_next
+@ :EndOfLine_Continue.
+D = 0|A
+@ :&sym_next.
+M = 0|D
+; set up PC
+@ :&pc.
+D = 0|M
+@ :&sym_value.
+M = 0|D
+@ :Sym_Bind.
+= 0|D <=>
+
 ; Called when the line starts with & or #, denoting a constant definition.
 ; We need to call Sym_Read to read the symbol hash into &symbol, then Val_Read
 ; to read the value into &value, then copy &value to &sym_value and call Sym_Bind
@@ -309,27 +330,6 @@ M = 0|D
 @ :EndOfLine_Continue.
 D = 0|A
 @ :&sym_next.
-M = 0|D
-@ :Sym_Bind.
-= 0|D <=>
-
-; Called when we have successfully read in a label definition. This should in
-; practice be called at end of line via Sym_Read, so char=\0 and EndOfLine_Continue
-; is waiting for us.
-; So, we need to:
-; - set sym_next to EndOfLine_Continue, so Sym_Bind jumps straight there
-;   once we're done
-; - copy PC into sym_value and then call Sym_Bind.
-  :BindPC.
-; set up sym_next
-@ :EndOfLine_Continue.
-D = 0|A
-@ :&sym_next.
-M = 0|D
-; set up PC
-@ :&pc.
-D = 0|M
-@ :&sym_value.
 M = 0|D
 @ :Sym_Bind.
 = 0|D <=>
