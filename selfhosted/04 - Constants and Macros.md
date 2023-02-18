@@ -127,6 +127,27 @@ And a macro reference:
 ~macro-name
 ```
 
+#### Macro Arguments
+
+Arguments can be passed to a macro by appending them to the macro call with
+commas:
+
+```
+~macro,0,1,2,3
+```
+
+You can use anything you would use with @ as arguments, including numeric and
+character literals, labels, and named constants.
+
+Within the macro definition, up to ten arguments can be accessed by prefacing
+a single decimal digit with `%`:
+
+```
+[macro
+  @ %0
+]
+```
+
 ### Instruction format
 
 There are two kinds of instructions: load immediate and computation.

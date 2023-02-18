@@ -17,30 +17,23 @@
 ; expanding.
 :&macro_origin.
 
-; these will require cooperation from the mainloop!
+; Address of the macro we are about to invoke once we finish reading the
+; arguments.
+:&macro_address.
 
-; on macro definition, we need to branch based on pass
-; on first pass, we record the macro offset, then set macrodef flag
-; on second pass, we set the macrodef flag until we see end of macro, which
-; causes us to emit comments for everything
-
-; on macro invokation, we need to:
-; - record current file offset
-; - seek to start of macro
-; - set macroexpansion flag
-; - compile as normal
-; - at end of macro, unset macroexpansion flag and seek back to saved address
-; on first pass this should give us the correct PC values, and on second pass
-; it should emit the correct code
-
-
-;[pushd
-;  @ &pc
-;  A = 0|M
-;  M = 0|D
-;  @ &pc
-;  M = M+1
-;]
+; Arguments! Set when we hit a macroexpansion and spliced into the body in
+; Val_Read via %x expressions.
+:&macro_argp. ; pointer to current argument to read
+:&macro_argv. ; %0
+; %1
+; %2
+; %3
+; %4
+; %5
+; %6
+; %7
+; %8
+; %9
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Macro_Begin
@@ -131,8 +124,6 @@ M = 0|D
 = 0|D <=>
 
 ; Called after reading in the macro name.
-; TODO: macro argument support -- check if &char is \0 (eol) or , and if the
-; latter, after resolving, do a Val_Read and set that as the macro argument.
   :Macro_Expand_Resolve.
 @ :Macro_Expand_ResolveDone.
 D = 0|A
@@ -145,13 +136,63 @@ M = 0|D
 ; We need to set the in_macroexpansion flag and seek back to that point
 ; in the input file, which will cause the contents of the macro to be assembled
 ; into the output stream.
+; TODO: macro argument support -- check if &char is \0 (eol) or , and if the
+; latter, after resolving, do a Val_Read and set that as the macro argument.
   :Macro_Expand_ResolveDone.
-@ :&in_macroexpansion.
-M = 0+1
 @ :&sym_value.
 D = 0|M
-@ 77760 ; stdin_status
+@ :&macro_address.
+M = 0|D ; copy the resolved value into macro_address
+@ :&char.
+D = 0|M
+@ :Macro_Expand_Call.
+= 0|D = ; if char is \0, no arguments, call immediately
+; there must be arguments, so set up the argv pointer and start reading them
+; in with Val_Read.
+  :Macro_Expand_WithArguments.
+@ :&macro_argv.
+D = 0|A
+@ :&macro_argp.
+M = 0|D ; set argp to point at the start of argv
+@ :Macro_Expand_ArgDone.
+D = 0|A
+@ :&val_next.
 M = 0|D
+@ :Val_Read.
+= 0|D <=>
+
+; We just finished reading in an argument, so store it in the next argv slot,
+; increment argp, and either read another one or invoke the macro depending
+; on whether we're at EOL or not.
+  :Macro_Expand_ArgDone.
+@ :&value.
+D = 0|M
+@ :&macro_argp.
+A = 0|M
+M = 0|D
+@ :&macro_argp.
+M = M+1
+@ :&char. ; char = \0? end of line, so call the macro
+D = 0|M
+@ :Macro_Expand_Call.
+= 0|D =
+; otherwise look for another argument!
+@ :Macro_Expand_ArgDone.
+D = 0|A
+@ :&val_next.
+M = 0|D
+@ :Val_Read.
+= 0|D <=>
+
+; Called to actually invoke the macro once we've read in the macro address and
+; all the arguments, if any.
+  :Macro_Expand_Call.
+@ :&in_macroexpansion.
+M = 0+1
+@ :&macro_address.
+D = 0|M
+@ 77760 ; stdin_status
+M = 0|D ; seek back to the remembered address
 ; We jump back to mainloop here because the line containing the macroexpansion
 ; should be replaced with the first line of the macro, not with a no-op
 ; but this means that the state is still set to Sym_Read

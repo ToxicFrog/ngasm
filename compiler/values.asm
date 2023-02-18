@@ -101,6 +101,13 @@ D = 0|M
 D = D-A
 @ :Val_Read_Hex.
 = 0|D =
+; Macroexpansion argument?
+@ :&char.
+D = 0|M
+@ 45 ; '%'
+D = D-A
+@ :Val_Read_MacroArg.
+= 0|D =
 ; None of the above? Assume it's a decimal constant. Set that as the current
 ; state and then jump to it to process the first character.
 @ :Val_Read_Dec.
@@ -109,6 +116,7 @@ D = 0|A
 M = 0|D
 @ :Val_Read_Dec.
 = 0|D <=>
+
 
 ; Called after reading in a symbol. We need to call Sym_Resolve to get the
 ; associated value.
@@ -142,6 +150,14 @@ M = 0+D
 ; If char is 0 we're at EOL and have nothing further to do
 @ :&char.
 D = 0|M
+@ :&val_next.
+A = 0|M
+= 0|D =
+; If char is , this is an argument separator, same deal as EOL
+@ :&char.
+D = 0|M
+@ 54 ; ','
+D = D-A
 @ :&val_next.
 A = 0|M
 = 0|D =
@@ -180,6 +196,37 @@ M = 0+D
 @ :MainLoop.
 = 0|D <=>
 
+; Called to read a macro argument. Read one decimal digit and return
+; *(macro_argv + digit).
+  :Val_Read_MacroArg.
+@ :Val_Read_MacroArg_State.
+D = 0|A
+@ :&state.
+M = 0+D
+@ :MainLoop.
+= 0|D <=>
+
+  :Val_Read_MacroArg_State.
+; if at end of line, call the continuation
+@ :&char.
+D = 0|M
+@ :&val_next.
+A = 0|M
+= 0|D =
+; else read the corresponding argument into value
+@ :&char.
+D = 0|M
+@ 60 ; '0'
+D = D-A
+@ :&macro_argv.
+A = A+D
+D = 0|M
+@ :&value.
+M = 0|D
+; and then return to the main loop
+@ :MainLoop.
+= 0|D <=>
+
 ; Called by LoadImmediate on encountering the leading $ of a hex constant.
 ; Unlike DecimalConstant we don't want to ingest the first character of the
 ; constant (since $ is not a digit), so we just set ReadDigit as the current
@@ -200,6 +247,14 @@ M = 0+D
 ; Check if we're at end of line, if so just do nothing
 @ :&char.
 D = 0|M
+@ :&val_next.
+A = 0|M
+= 0|D =
+; If char is , this is an argument separator, same deal as EOL
+@ :&char.
+D = 0|M
+@ 54 ; ','
+D = D-A
 @ :&val_next.
 A = 0|M
 = 0|D =
@@ -286,7 +341,14 @@ M = 0+D
 ; the val_next continuation.
 @ :&char.
 D = 0|M
-@ :&Val_Read_Dec_EOL.
+@ :Val_Read_Dec_EOL.
+= 0|D =
+; If char is , this is an argument separator, same deal as EOL
+@ :&char.
+D = 0|M
+@ 54 ; ','
+D = D-A
+@ :Val_Read_Dec_EOL.
 = 0|D =
 ; Start by making room in the value buffer
 @ :&value.
