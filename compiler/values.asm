@@ -8,6 +8,7 @@
 ;; - character literals ('a)
 ;; - decimal literals (123)
 ;; - hex literals ($123)
+;; - relative program counter offsets (-n or +n)
 ;; - and symbols, starting with [&#:], which are delegated to Sym_Read
 ;;
 ;; It exports one procedure: Val_Read, which activates a parser state for
@@ -79,7 +80,21 @@ D = 0|M
 D = D-A
 @ :Val_Read_Char.
 = 0|D =
-; Not a symbol or a character, so maybe it's a hex constant starting with $...
+; Relative jump address backwards?
+@ :&char.
+D = 0|M
+@ 55 ; '-'
+D = D-A
+@ :Val_Read_RelativeJump_Back.
+= 0|D =
+; Relative jump address forwards?
+@ :&char.
+D = 0|M
+@ 53 ; '+'
+D = D-A
+@ :Val_Read_RelativeJump_Forward.
+= 0|D =
+; Hex constant starting with $?
 @ :&char.
 D = 0|M
 @ 44 ; '$'
@@ -134,6 +149,33 @@ A = 0|M
 @ :&char.
 D = 0|M
 @ :&value.
+M = 0+D
+@ :MainLoop.
+= 0|D <=>
+
+; These are for generating relative jump values. It is the same as decimal
+; values except at the end, we must add or subtract it from the program counter.
+; So we delegate this to Val_Read_Dec except we also set a flag indicating that
+; at the end of reading the value it should apply the PC offset.
+; So here's the flag:
+  :&relative-jump-mode.
+; And the procedures:
+  :Val_Read_RelativeJump_Back.
+@ :&relative-jump-mode.
+M = 0-1
+@ :Val_Read_Dec_State.
+D = 0|A
+@ :&state.
+M = 0+D
+@ :MainLoop.
+= 0|D <=>
+
+  :Val_Read_RelativeJump_Forward.
+@ :&relative-jump-mode.
+M = 0+1
+@ :Val_Read_Dec_State.
+D = 0|A
+@ :&state.
 M = 0+D
 @ :MainLoop.
 = 0|D <=>
@@ -239,11 +281,12 @@ M = 0+D
 ; fall through to state
 
   :Val_Read_Dec_State.
-; Check if we're at end of line, if so just do nothing
+; Check if we're at end of line. If so we may need to do processing for relative
+; jumps before we generate the opcode, and in either case we should then call
+; the val_next continuation.
 @ :&char.
 D = 0|M
-@ :&val_next.
-A = 0|M
+@ :&Val_Read_Dec_EOL.
 = 0|D =
 ; Start by making room in the value buffer
 @ :&value.
@@ -268,5 +311,38 @@ D = D-A
 @ :&value.
 M = D+M
 @ :MainLoop.
+= 0|D <=>
+
+  :Val_Read_Dec_EOL.
+@ :&relative-jump-mode.
+D = 0|M
+M = 0&D ; clear the flag, we have the value saved in D
+@ :Val_Read_Dec_JumpBack.
+= 0|D <
+@ :Val_Read_Dec_JumpForward.
+= 0|D >
+@ :Val_Read_Dec_Done.
+= 0|D <=>
+
+  :Val_Read_Dec_JumpBack.
+@ :&pc.
+D = 0|M
+@ :&value.
+M = D-M
+@ :Val_Read_Dec_Done.
+= 0|D <=>
+
+  :Val_Read_Dec_JumpForward.
+@ :&pc.
+D = 0|M
+@ :&value.
+M = D+M
+@ :Val_Read_Dec_Done.
+= 0|D <=>
+
+  :Val_Read_Dec_Done.
+; call the continuation
+@ :&val_next.
+A = 0|M
 = 0|D <=>
 

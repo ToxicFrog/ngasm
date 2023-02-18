@@ -182,6 +182,9 @@ M = M+1
 D = 0|M
 @ 77772 ; &stdout
 M = 0|D
+; Also increment PC, since relative jumps are calculated on the second pass.
+@ :&pc.
+M = M+1
 @ :NewInstruction.
 = 0|D <=>
 

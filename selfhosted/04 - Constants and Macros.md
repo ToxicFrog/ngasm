@@ -40,7 +40,7 @@ whitespace, such as tabs, has *undefined effects*.
 Registers are designated with the letters `A` or `D`. The letter `M` denotes the
 memory cell pointed to the current value of the A register.
 
-Numeric literals can be written in three different formats:
+Numeric literals can be written in four different formats:
 
 - *Decimal literals* consist of a sequence of the digits 0-9 and are treated as
   an unsigned base 10 number.
@@ -48,6 +48,10 @@ Numeric literals can be written in three different formats:
   0-9, a-f, and A-F and are treated as an unsigned base 16 number.
 - *Character literals* consist of a `'` followed by a single character and are
   treated as the 7-bit ASCII value of that character.
+- *Relative addresses* are decimal literals prefaced with a `+` (for a jump
+  forward) or a `-` (for a jump backwards); this will compile as the address of
+  the instruction itself, plus or minus the given value. It is safe to use in
+  macros.
 
 Thus, the following three instructions are equivalent:
 ```
