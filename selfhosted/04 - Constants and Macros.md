@@ -15,10 +15,21 @@ get a readable hex dump is recommended.)
 One word of output is written per input line; lines that contain no code will
 result in no-op instructions being written.
 
-On error, it writes a single zero byte to the output file and exits. Since a
-well-formed ROM will always have an even number of bytes in it, this means you
-can detect that a compilation error occurred if the size of the output file is
-odd, and where in the file it occurred by how long the file is.
+On error, it writes three bytes at the end of the output file and then exits.
+Since a well-formed ROM will always have an even number of bytes in it, this
+means you can detect that a compilation error occurred if the size of the output
+file is odd.
+
+The first two bytes are a big-endian word holding the line number of the input
+file at which the error occurred. In the case of macros, if the error occurred
+during initial parsing of the macro, the line number will be inside the macro
+definition; if it occurred during macro expansion, it will point to the place
+where the macro was invoked.
+
+The third byte indicates what pass of the compiler the error occurred on. A 0
+means that it happened during the initial binding pass and is probably a syntax
+error. A 1 means that it happened during the code generation pass and is
+probably a symbol lookup error.
 
 ## Language
 

@@ -20,6 +20,8 @@
 :&in_comment.
 ; Pointer to current state
 :&state.
+; Number of current line. Used for error reporting.
+:&line.
 
 ; Whether we're on the first pass (0) or the second pass (1).
 ; There are more elegant ways to do this but I can implement those once we have

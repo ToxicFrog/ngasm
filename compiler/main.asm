@@ -19,6 +19,8 @@
 D = 0|A
 @ :&last_sym.
 M = 0|D
+@ :&line.  ; initialize line number to 1
+M = 0+1
 ; Fall through to :NewInstruction
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -131,9 +133,11 @@ M = 0&D
 ; And the seek point
 @ :&fseek.
 M = 0&D
-; Then increment pass and restart the main loop.
+; Then increment pass, reset the line counter, and restart the main loop.
 @ :&pass.
 M = M+1
+@ :&line.
+M = 0+1
 @ :MainLoop.
 = 0|D <=>
 
@@ -159,6 +163,14 @@ A = 0|M
 ; In either case it calls NewInstruction afterwards to reset the parser state,
 ; opcode buffer, etc.
   :EndOfLine_Continue.
+; If we're in a macro, don't increment line number
+@ :in_macroexpansion.
+D = 0|M
+@ :EndOfLine_NoLineNum.
+= 0|D <>
+@ :&line.
+M = M+1
+  :EndOfLine_NoLineNum.
 ; If pass == 0, call _FirstPass, else _SecondPass.
 @ :&pass.
 D = 0|M
@@ -801,13 +813,20 @@ M = D | M
 ;; End of program stuff                                                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; Error state. Write a single zero byte to the output so that external tools can
-; tell something went wrong, since the output will have an odd number of bytes
-; in it.
-; Someday we should have a way to reopen and thus erase the file.
+; Error state. Write the input line number as a word, then the current pass
+; as a byte.
+; External tools will be able to tell something went wrong because the ROM will
+; have an odd number of bytes in it, and a well-formed image should always be
+; word-aligned.
   :Error.
+@ :&line.
+D = 0|M
+@ 77772 ; &stdout_words
+M = 0|D
+@ :&pass.
+D = 0|M
 @ 77771 ; &stdout_bytes
-M = 0&A
+M = 0|D
 ; fall through to Exit
 
   :Exit.

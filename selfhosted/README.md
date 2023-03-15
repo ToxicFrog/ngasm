@@ -105,6 +105,9 @@ Constant support is added as a new parser branch, accessed by starting a line wi
 `#` or `&`; by following the symbol with an `=` and then a value, you can bind
 names to arbitrary values.
 
+Very primitive error reporting is added, with the ability of the compiler to
+report the line number it was processing when it errored out.
+
 Finally, the big new feature is macro support; macros can be defined as sequences
 of instructions, including arguments that can be provided at the call site and
 which are spliced into the body of the macro at evaluation time. Macros are not

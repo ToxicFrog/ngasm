@@ -295,6 +295,8 @@ D = D-A
 @ :Val_Read_HexNumeric.
 = 0|D <=>
 
+  :. ; for some reason we need a dummy label here or the definition of the
+  ; following label doesn't stick.
   :Val_Read_HexLower.
 @ :&char.
 D = 0|M
