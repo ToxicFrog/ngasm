@@ -1,12 +1,12 @@
-# ngasm syntax (stages 2 and 3)
+# ngasm syntax (stage 4)
 
 This document describes the behaviour of, and language understood by, the
 assembler program.
 
 ## Behaviour
 
-The assembler requires the source file mapped as a readable iostream at $7FF0,
-and the destination file mapped as a writeable iostream at $7FF8.
+The assembler requires the source file mapped as a readable and seekable iostream
+at $7FF0, and the destination file mapped as a writeable iostream at $7FF8.
 
 It produces no diagnostic output; on success the entire ROM image is written, in
 big-endian binary format, to the destination file. (Piping it through `xxd` to

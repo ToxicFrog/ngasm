@@ -16,6 +16,10 @@ The three file types contained herein are:
 If a given version has no `.md` file, that means the behaviour, and thus the
 documentation, hasn't changed since the previous version.
 
+Some versions may have a directory full of `.asm` files; in that case these are
+the recommended form in which to edit the source, and the top-level `.asm` file
+is just a concatenation of these files to feed to the compiler.
+
 ## 00 - Simple Assembler (nandgame syntax)
 
 This is the first version of the assembler. It's designed to be straightforward
@@ -83,25 +87,34 @@ care exactly where in memory they reside, just that they have unique addresses.
 Since the assembler still outputs 1 instruction per line, even on blank lines,
 each label will have a unique address.
 
-# 04 - Defines and Syntax Tidying
+# 04 - Constants and Macros
 
-This is planned to bring a number of reader improvements:
-- decimal constants by default
-- $ff for hex constants
-- 'a for character constants
-- no terminating . needed on labels
-- &foo 1 and #foo 1 for arbitrary-value defines
-- strip nops from output
+This brings a major expansion in capabilities. To support this, the code for
+reading constants and symbols is pulled out into reusable procedures, which can
+be called from anywhere in the program and passed a continuation to call once
+finished.
 
-# 06 - Macros
+The literal reader drops support for octal and replaces it with support for
+decimal, hexadecimal, and character literals. It can also delegate to the symbol
+reader if it encounters a symbol where a literal was expected.
 
-This version will hopefully bring macro support, the ability the bind a symbol
-to a sequence of instructions. The first version will probably not support
-arguments, but that still gives us the starting rudiments of a stack:
-initsp pusha pushd popa popd add sub, the various logical operators, and
-possibly even versions of call/return that operate entirely from the stack
-rather than from arguments.
+The symbol reader adds support for symbols starting with `#` or `&`, and removes
+the requirement that all symbols end with `.`.
 
-# 08 - Stack Language
+Constant support is added as a new parser branch, accessed by starting a line with
+`#` or `&`; by following the symbol with an `=` and then a value, you can bind
+names to arbitrary values.
 
-Maybe we implement an itty bitty forth?
+Finally, the big new feature is macro support; macros can be defined as sequences
+of instructions, including arguments that can be provided at the call site and
+which are spliced into the body of the macro at evaluation time. Macros are not
+functions; they are evaluated during compilation and emit instructions directly
+into the generated binary at the point where they are called.
+
+Internally, this is implemented by recording, as the value of each macro, the
+offset in the file at which the macro starts. When a call to the macro is
+encountered, the current file offset is saved, and the input file is rewound to
+the point in the file where the macro starts. The contents of the macro are thus
+processed and output as if they occurred in the file at the point where the macro
+call is, and once the end of the macro definition is reached, the saved file
+offset is restored.
