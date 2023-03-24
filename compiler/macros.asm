@@ -99,7 +99,7 @@ M = 0&D
 ; line immediately after it was called.
 @ :&fseek.
 D = 0|M
-@ 77760 ; &stdin_status
+@ 077760 ; &stdin_status
 M = 0|D ; seek
 @ :MainLoop.
 = 0|D <=>
@@ -112,7 +112,7 @@ M = 0|D ; seek
   :Macro_Expand.
 ; Step one, resolve the macro. Pretend the first character is [ so that it matches
 ; the symbol seen at macro definition time.
-@ 133 ; '['
+@ 0133 ; '['
 D = 0|A
 @ :&char.
 M = 0|D
@@ -191,7 +191,7 @@ M = 0|D
 M = 0+1
 @ :&macro_address.
 D = 0|M
-@ 77760 ; stdin_status
+@ 077760 ; stdin_status
 M = 0|D ; seek back to the remembered address
 ; We jump back to mainloop here because the line containing the macroexpansion
 ; should be replaced with the first line of the macro, not with a no-op

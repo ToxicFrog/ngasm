@@ -46,7 +46,8 @@ M = 0|D
 ; This is the master value-reading state. It will transfer control to a secondary
 ; state based on the first character sees; a :, &, or # means a symbol reference
 ; which must be resolved, a ' means a character constant, a $ means a hexadecimal
-; constant, and anything else we optimistically assume is a decimal constant.
+; constant, a 0 means an octal constant, ~ and % mean macro expansion and
+; argument splicing, and anything else we optimistically assume is a decimal constant.
   :Val_Read_State.
 ; First, check for ':', '&', and '#'. These all immediately transfer control to
 ; Sym_Read, so we set up the continuation for those ahead of time.
@@ -57,54 +58,61 @@ M = 0|D
 ; Now check the actual characters
 @ :&char.
 D = 0|M
-@ 72 ; ':'
+@ 072 ; ':'
 D = D-A
 @ :Sym_Read.
 = 0|D =
 @ :&char.
 D = 0|M
-@ 43 ; '#'
+@ 043 ; '#'
 D = D-A
 @ :Sym_Read.
 = 0|D =
 @ :&char.
 D = 0|M
-@ 46 ; '&'
+@ 046 ; '&'
 D = D-A
 @ :Sym_Read.
 = 0|D =
 ; Now check for a character constant.
 @ :&char.
 D = 0|M
-@ 47 ; "'"
+@ 047 ; "'"
 D = D-A
 @ :Val_Read_Char.
 = 0|D =
 ; Relative jump address backwards?
 @ :&char.
 D = 0|M
-@ 55 ; '-'
+@ 055 ; '-'
 D = D-A
 @ :Val_Read_RelativeJump_Back.
 = 0|D =
 ; Relative jump address forwards?
 @ :&char.
 D = 0|M
-@ 53 ; '+'
+@ 053 ; '+'
 D = D-A
 @ :Val_Read_RelativeJump_Forward.
 = 0|D =
 ; Hex constant starting with $?
 @ :&char.
 D = 0|M
-@ 44 ; '$'
+@ 044 ; '$'
 D = D-A
 @ :Val_Read_Hex.
+= 0|D =
+; Octal constant starting with 0?
+@ :&char.
+D = 0|M
+@ 060 ; '0'
+D = D-A
+@ :Val_Read_Oct.
 = 0|D =
 ; Macroexpansion argument?
 @ :&char.
 D = 0|M
-@ 45 ; '%'
+@ 045 ; '%'
 D = D-A
 @ :Val_Read_MacroArg.
 = 0|D =
@@ -156,7 +164,7 @@ A = 0|M
 ; If char is , this is an argument separator, same deal as EOL
 @ :&char.
 D = 0|M
-@ 54 ; ','
+@ 054 ; ','
 D = D-A
 @ :&val_next.
 A = 0|M
@@ -216,7 +224,7 @@ A = 0|M
 ; else read the corresponding argument into value
 @ :&char.
 D = 0|M
-@ 60 ; '0'
+@ 060 ; '0'
 D = D-A
 @ :&macro_argv.
 A = A+D
@@ -253,7 +261,7 @@ A = 0|M
 ; If char is , this is an argument separator, same deal as EOL
 @ :&char.
 D = 0|M
-@ 54 ; ','
+@ 054 ; ','
 D = D-A
 @ :&val_next.
 A = 0|M
@@ -282,13 +290,13 @@ M = D+M
 ; otherwise if it's >= A we have A-F, otherwise it's 0-9.
 @ :&char.
 D = 0|M
-@ 141 ; 'a'
+@ 0141 ; 'a'
 D = D-A
 @ :Val_Read_HexLower.
 = 0|D >=
 @ :&char.
 D = 0|M
-@ 101 ; 'A'
+@ 0101 ; 'A'
 D = D-A
 @ :Val_Read_HexUpper.
 = 0|D >=
@@ -300,7 +308,7 @@ D = D-A
   :Val_Read_HexLower.
 @ :&char.
 D = 0|M
-@ 127 ; 'a' - 10
+@ 0127 ; 'a' - 10
 D = D-A
 @ :&value.
 M = D+M
@@ -310,7 +318,7 @@ M = D+M
   :Val_Read_HexUpper.
 @ :&char.
 D = 0|M
-@ 67 ; 'A' - 10
+@ 067 ; 'A' - 10
 D = D-A
 @ :&value.
 M = D+M
@@ -320,7 +328,7 @@ M = D+M
   :Val_Read_HexNumeric.
 @ :&char.
 D = 0|M
-@ 60 ; '0'
+@ 060 ; '0'
 D = D-A
 @ :&value.
 M = D+M
@@ -348,7 +356,7 @@ D = 0|M
 ; If char is , this is an argument separator, same deal as EOL
 @ :&char.
 D = 0|M
-@ 54 ; ','
+@ 054 ; ','
 D = D-A
 @ :Val_Read_Dec_EOL.
 = 0|D =
@@ -370,7 +378,7 @@ M = D+M
 D = 0|M
 ; Subtract '0' to get a value in the range 0-9
 ; or out of the range if the user typed in some sort of garbage, oh well
-@ 60 ; '0'
+@ 060 ; '0'
 D = D-A
 @ :&value.
 M = D+M
@@ -410,3 +418,50 @@ M = D+M
 A = 0|M
 = 0|D <=>
 
+; The state for reading the number in a load immediate instruction.
+; This is the reader for octal numbers, which we're probably going to remove
+; but stays here for backwards compatibility.
+  :Val_Read_Oct.
+@ :Val_Read_Oct_State.
+D = 0|A
+@ :&state.
+M = 0+D
+; fall through to state
+
+  :Val_Read_Oct_State.
+; Check if we're at end of line, if so just do nothing
+@ :&char.
+D = 0|M
+@ :&val_next.
+A = 0|M
+= 0|D =
+; If char is , this is an argument separator, same deal as EOL
+@ :&char.
+D = 0|M
+@ 054 ; ','
+D = D-A
+@ :&val_next.
+A = 0|M
+= 0|D =
+; Start by making room in the value buffer
+@ :&value.
+D = 0|M
+; Add D to M 7 times for a total of x8
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+M = D+M
+; Now add the next digit
+@ :&char.
+D = 0|M
+; Subtract '0' to get a value in the range 0-7
+; or out of the range if the user typed in some sort of garbage, oh well
+@ 060 ; '0'
+D = D-A
+@ :&value.
+M = D+M
+@ :MainLoop.
+= 0|D <=>

@@ -53,8 +53,10 @@ memory cell pointed to the current value of the A register.
 
 Numeric literals can be written in four different formats:
 
-- *Decimal literals* consist of a sequence of the digits 0-9 and are treated as
-  an unsigned base 10 number.
+- *Decimal literals* consist of a sequence of the digits 0-9, starting with any
+  digit other than 0, and are treated as an unsigned base 10 number.
+- *Octal literals* consist of a sequence of the digits 0-7, starting with 0, and
+  are treated as an unsigned base 8 number.
 - *Hexadecimal literals* consist of a `$` followed by a sequence of the digits
   0-9, a-f, and A-F and are treated as an unsigned base 16 number.
 - *Character literals* consist of a `'` followed by a single character and are
@@ -64,14 +66,13 @@ Numeric literals can be written in four different formats:
   the instruction itself, plus or minus the given value. It is safe to use in
   macros.
 
-Thus, the following three instructions are equivalent:
+Thus, the following four instructions are equivalent:
 ```
+@ 072
 @ 58
 @ $3A
 @ ':
 ```
-
-Note that support for octal literals was removed in this version.
 
 ### Labels
 

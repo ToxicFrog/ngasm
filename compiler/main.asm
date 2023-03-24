@@ -33,7 +33,7 @@ M = 0+1
   :NewInstruction.
 ; Set opcode to 0x8000, which is a no-op (computes D&A and discards it).
 ; We do this by computing 0x4000+0x4000 since we can't express 0x8000 directly.
-@ 40000 ;16384
+@ 040000 ;16384
 D = 0+A
 D = D+A
 @ :&opcode.
@@ -54,12 +54,12 @@ M = 0|D
 ; trigger opcode emission, everything else is passed to the current state.
   :MainLoop.
 ; Read input status word, if end of file, start next pass or end program.
-@ 77760 ; &stdin_status
+@ 077760 ; &stdin_status
 D = 0|M
 @ :NextPass.
 = 0|D =
 ; Read next byte of input and stash it in char
-@ 77761 ; &stdin
+@ 077761 ; &stdin
 D = 0|M
 @ :&char.
 M = 0|D
@@ -76,7 +76,7 @@ M = M+1
 ; If it's a newline, run the end-of-line routine.
 @ :&char.
 D = 0|M
-@ 12
+@ 012
 D = D - A
 @ :EndOfLine.
 = 0|D =
@@ -88,14 +88,14 @@ D = 0|M
 ; Also skip spaces
 @ :&char.
 D = 0|M
-@ 40
+@ 040
 D = D - A
 @ :MainLoop.
 = 0|D =
 ; If it's a start-of-comment character, run CommentStart to set the in_comment flag
 @ :&char.
 D = 0|M
-@ 73
+@ 073
 D = D - A
 @ :CommentStart.
 = 0|D =
@@ -125,7 +125,7 @@ D = 0|M
 @ :Exit.
 = 0|D >
 ; Otherwise, rewind stdin to start of file by writing a 0 to it
-@ 77760 ; &stdin_status
+@ 077760 ; &stdin_status
 M = 0&D
 ; Reset the program counter to 0
 @ :&pc.
@@ -192,7 +192,7 @@ M = M+1
 ; regardless.
 @ :&opcode.
 D = 0|M
-@ 77772 ; &stdout
+@ 077772 ; &stdout
 M = 0|D
 ; Also increment PC, since relative jumps are calculated on the second pass.
 @ :&pc.
@@ -225,7 +225,7 @@ D = 0|M
 ; Is it an @? If so this is a load immediate A opcode.
 @ :&char.
 D = 0|M
-@ 100 ; '@'
+@ 0100 ; '@'
 D = D-A
 @ :LineStart_LoadImmediate.
 = 0|D =
@@ -233,7 +233,7 @@ D = D-A
 ; what pass we're on.
 @ :&char.
 D = 0|M
-@ 72 ; ':'
+@ 072 ; ':'
 D = D-A
 @ :LineStart_Label.
 = 0|D =
@@ -241,35 +241,35 @@ D = D-A
 ; the value.
 @ :&char.
 D = 0|M
-@ 46 ; '&'
+@ 046 ; '&'
 D = D-A
 @ :LineStart_Constant.
 = 0|D =
 ; Same deal with # as with &.
 @ :&char.
 D = 0|M
-@ 43 ; '#'
+@ 043 ; '#'
 D = D-A
 @ :LineStart_Constant.
 = 0|D =
 ; If it's a [, this is the start of a macro definition.
 @ :&char.
 D = 0|M
-@ 133 ; '['
+@ 0133 ; '['
 D = D-A
 @ :Macro_Begin.
 = 0|D =
 ; If it's a ], this is the end of a macro definition.
 @ :&char.
 D = 0|M
-@ 135 ; ']'
+@ 0135 ; ']'
 D = D-A
 @ :Macro_End.
 = 0|D =
 ; If it's a ~, this is a macro invokation
 @ :&char.
 D = 0|M
-@ 176 ; '~'
+@ 0176 ; '~'
 D = D-A
 @ :Macro_Expand.
 = 0|D =
@@ -398,28 +398,28 @@ M = 0|D
 ; Check for =, which sends us to the next state (LHS)
 @ :&char.
 D = 0|M
-@ 75 ; '='
+@ 075 ; '='
 D = D-A
 @ :Destination_Finished.
 = 0|D =
 ; Check for A.
 @ :&char.
 D = 0|M
-@ 101 ; 'A'
+@ 0101 ; 'A'
 D = D-A
 @ :Destination_A.
 = 0|D =
 ; Check for D.
 @ :&char.
 D = 0|M
-@ 104 ; 'D'
+@ 0104 ; 'D'
 D = D-A
 @ :Destination_D.
 = 0|D =
 ; Check for M.
 @ :&char.
 D = 0|M
-@ 115 ; 'M'
+@ 0115 ; 'M'
 D = D-A
 @ :Destination_M.
 = 0|D =
@@ -441,17 +441,17 @@ M = 0|D
 ; the instruction and then jump to Destination_SetBits, which does the actual
 ; modification of the opcode.
   :Destination_A.
-@ 40 ; 0x0020
+@ 040 ; 0x0020
 D = 0|A
 @ :Destination_SetBits.
 = 0|D <=>
   :Destination_D.
-@ 20 ; 0x0010
+@ 020 ; 0x0010
 D = 0|A
 @ :Destination_SetBits.
 = 0|D <=>
   :Destination_M.
-@ 10 ; 0x0008
+@ 010 ; 0x0008
 D = 0|A
 ; fall through
 ; The bit we want is in D, so bitwise-or it into the opcode
@@ -476,28 +476,28 @@ M = D | M
 ; Check for A.
 @ :&char.
 D = 0|M
-@ 101 ; 'A'
+@ 0101 ; 'A'
 D = D-A
 @ :LHS_A.
 = 0|D =
 ; Check for D.
 @ :&char.
 D = 0|M
-@ 104 ; 'D'
+@ 0104 ; 'D'
 D = D-A
 @ :LHS_Done.
 = 0|D =
 ; Check for M.
 @ :&char.
 D = 0|M
-@ 115 ; 'M'
+@ 0115 ; 'M'
 D = D-A
 @ :LHS_M.
 = 0|D =
 ; Check for 0.
 @ :&char.
 D = 0|M
-@ 60 ; '0'
+@ 060 ; '0'
 D = D-A
 @ :LHS_Z.
 = 0|D =
@@ -508,20 +508,20 @@ D = D-A
 
 ; Operand is 0, set the zx bit.
   :LHS_Z.
-@ 200 ; 0x0080
+@ 0200 ; 0x0080
 D = 0|A
 @ :LHS_SetBits.
 = 0|D <=>
 
 ; Operand is M, set the mr bit and fall through the LHS_A to set the sw bit.
   :LHS_M.
-@ 10000 ; 0x1000
+@ 010000 ; 0x1000
 D = 0|A
 ; fall through to LHS_A.
 
 ; Operand is A, set the sw bit.
   :LHS_A.
-@ 100 ; 0x1000
+@ 0100 ; 0x1000
 ; Use | here so that the fallthrough case from LHS_M works as expected.
 ; If we came from LHS proper, D is guaranteed to be zero because we JEQ'd.
 D = D|A
@@ -556,42 +556,42 @@ M = 0|D
 ; add
 @ :&char.
 D = 0|M
-@ 53 ; '+'
+@ 053 ; '+'
 D = D-A
 @ :Operator_Add.
 = 0|D =
 ; sub
 @ :&char.
 D = 0|M
-@ 55 ; '-'
+@ 055 ; '-'
 D = D-A
 @ :Operator_Sub.
 = 0|D =
 ; and
 @ :&char.
 D = 0|M
-@ 46 ; &
+@ 046 ; &
 D = D-A
 @ :Operator_And.
 = 0|D =
 ; or
 @ :&char.
 D = 0|M
-@ 174 ; '|'
+@ 0174 ; '|'
 D = D-A
 @ :Operator_Or.
 = 0|D =
 ; xor
 @ :&char.
 D = 0|M
-@ 136 ; '^'
+@ 0136 ; '^'
 D = D-A
 @ :Operator_Xor.
 = 0|D =
 ; not
 @ :&char.
 D = 0|M
-@ 41 ; '!'
+@ 041 ; '!'
 D = D-A
 @ :Operator_Not.
 = 0|D =
@@ -604,12 +604,12 @@ D = D-A
 ; set the bits needed in D and then jump to SetBits to actually move
 ; them into the opcode.
   :Operator_Add.
-@ 2000 ; 0x0400
+@ 02000 ; 0x0400
 D = 0|A
 @ :Operator_SetBits.
 = 0|D <=>
   :Operator_Sub.
-@ 3000 ; 0x0600
+@ 03000 ; 0x0600
 D = 0|A
 @ :Operator_SetBits.
 = 0|D <=>
@@ -618,12 +618,12 @@ D = 0&A
 @ :Operator_SetBits.
 = 0|D <=>
   :Operator_Or.
-@ 400 ; 0x0100
+@ 0400 ; 0x0100
 D = 0|A
 @ :Operator_SetBits.
 = 0|D <=>
   :Operator_Xor.
-@ 1000 ; 0x0200
+@ 01000 ; 0x0200
 D = 0|A
 @ :Operator_SetBits.
 = 0|D <=>
@@ -631,7 +631,7 @@ D = 0|A
 ; This gets special handling because we need to skip the second operand
 ; entirely, since not is a unary operation.
   :Operator_Not.
-@ 1400 ; 0x0300
+@ 01400 ; 0x0300
 D = 0|A
 @ :&opcode.
 M = D | M
@@ -668,28 +668,28 @@ M = 0|D
 ; Check for A. This is the default case, so we set no bits.
 @ :&char.
 D = 0|M
-@ 101 ; 'A'
+@ 0101 ; 'A'
 D = D-A
 @ :RHS_Done.
 = 0|D =
 ; Check for D.
 @ :&char.
 D = 0|M
-@ 104 ; 'D'
+@ 0104 ; 'D'
 D = D-A
 @ :RHS_D.
 = 0|D =
 ; Check for M.
 @ :&char.
 D = 0|M
-@ 115 ; 'M'
+@ 0115 ; 'M'
 D = D-A
 @ :RHS_M.
 = 0|D =
 ; Check for 1.
 @ :&char.
 D = 0|M
-@ 61 ; '1'
+@ 061 ; '1'
 D = D-A
 @ :RHS_One.
 = 0|D =
@@ -708,14 +708,14 @@ D = 0|M
 ; have been 0, A, or M, but we don't check that here. An appropriate check
 ; would be that either sw or zx is already set.)
   :RHS_D.
-@ 100 ; 0x0040
+@ 0100 ; 0x0040
 D = 0|A
 @ :RHS_SetBits.
 = 0|D <=>
 
 ; Operand is M, set the mr bit.
   :RHS_M.
-@ 10000 ; 0x1000
+@ 010000 ; 0x1000
 D = 0|A
 @ :RHS_SetBits.
 = 0|D <=>
@@ -723,7 +723,7 @@ D = 0|A
 ; Operand is 1, set op0 to turn add into inc and sub into dec.
 ; If the operator was not add or sub your machine code will be frogs.
   :RHS_One.
-@ 400 ; 0x0100
+@ 0400 ; 0x0100
 D = 0|A
 ; Fall through
 
@@ -756,21 +756,21 @@ M = 0|D
 ; less than
 @ :&char.
 D = 0|M
-@ 74 ; '<'
+@ 074 ; '<'
 D = D-A
 @ :Jump_LT.
 = 0|D =
 ; equal
 @ :&char.
 D = 0|M
-@ 75 ; '='
+@ 075 ; '='
 D = D-A
 @ :Jump_EQ.
 = 0|D =
 ; greater than
 @ :&char.
 D = 0|M
-@ 76 ; '>'
+@ 076 ; '>'
 D = D-A
 @ :Jump_GT.
 = 0|D =
@@ -786,17 +786,17 @@ D = 0|M
 = 0|D <=>
 
   :Jump_LT.
-@ 4 ; 0x0004
+@ 04 ; 0x0004
 D = 0|A
 @ :Jump_SetBits.
 = 0|D <=>
   :Jump_EQ.
-@ 2 ; 0x0002
+@ 02 ; 0x0002
 D = 0|A
 @ :Jump_SetBits.
 = 0|D <=>
   :Jump_GT.
-@ 1 ; 0x0001
+@ 01 ; 0x0001
 D = 0|A
 @ :Jump_SetBits.
 = 0|D <=>
@@ -821,17 +821,17 @@ M = D | M
   :Error.
 @ :&line.
 D = 0|M
-@ 77772 ; &stdout_words
+@ 077772 ; &stdout_words
 M = 0|D
 @ :&pass.
 D = 0|M
-@ 77771 ; &stdout_bytes
+@ 077771 ; &stdout_bytes
 M = 0|D
 ; fall through to Exit
 
   :Exit.
 ; Jump off the end of ROM
-@ 77777
+@ 077777
 = 0|D <=>
 
 ; To support labels we need a number of new features:

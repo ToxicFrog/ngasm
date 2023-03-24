@@ -50,7 +50,9 @@
 ; occupying two words each and stored contiguously in memory.
 ; This goes last since it will grow as new symbols are added and we don't want
 ; it overwriting one of our other vars!
-:&symbols.
+;:&symbols.
+; This turns out not to be large enough, so it gets shoved to zz-postscript
+; instead.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Sym_Read                                                                   ;;
@@ -89,7 +91,7 @@ A = 0|M
 ; check for comma and equals
 @ :&char.
 D = 0|M
-@ 54 ; ','
+@ 054 ; ','
 D = D-A
 @ :&sym_next.
 A = 0|M
@@ -97,7 +99,7 @@ A = 0|M
 ; check for end of line
 @ :&char.
 D = 0|M
-@ 75 ; '='
+@ 075 ; '='
 D = D-A
 @ :&sym_next.
 A = 0|M
