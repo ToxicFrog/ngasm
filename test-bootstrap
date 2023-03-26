@@ -12,12 +12,29 @@ MODE=${MODE:=run}
 
 cat compiler/*.asm > ngasm.asm
 
-luajit main.lua "flash $ROM" "file ngasm.asm 0x7FF0" "file /dev/stdout 0x7FF8 wb" "run" | xxd > next.hex
+luajit main.lua \
+  "flash $ROM" \
+  "file ngasm.asm 0x7FF0" \
+  "file /dev/stdout 0x7FF8 wb" \
+  "run" | xxd > next.hex
+
 if (( ($(xxd -r next.hex | wc -c) % 2) == 1 )); then
   echo "!! Error compiling next.hex !!"
   tail -n45 next.hex
   exit 1
 fi
+
+  # luajit main.lua \
+  #   "watch 33" \
+  #   "watch 67" \
+  #   "watch 68" \
+  #   "watch 69" \
+  #   "watch 70" \
+  #   "source ngasm.asm" \
+  #   "flash next.hex" \
+  #   "file test.asm 0x7FF0" \
+  #   "file /dev/null 0x7FF8 wb" run
+  # exit
 
 if [[ $MODE == run ]]; then
   luajit main.lua \

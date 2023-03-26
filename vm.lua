@@ -22,6 +22,7 @@ function vm.new()
     dev = {};
     -- debugging
     sourcemap = {};
+    watches = {};
   }
 
   setmetatable(new_vm, vm)
@@ -86,6 +87,7 @@ function vm:trace(n, fn)
       break
     end
     self:step()
+    self:check_watches()
     fn(self)
   end
   return self
@@ -199,6 +201,19 @@ function vm:detach(base)
   self.dev[base]:detach()
   self.dev[base] = nil
   return self
+end
+
+function vm:add_watch(address)
+  self.watches[address] = 0
+end
+
+function vm:check_watches()
+  for addr,val in pairs(self.watches) do
+    if self.ram[addr] ~= val then
+      print(self)
+      self.watches[addr] = self.ram[addr]
+    end
+  end
 end
 
 -- end of library

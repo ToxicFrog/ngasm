@@ -197,4 +197,12 @@ function commands.step.fn(CPU)
   printf('%s\n', CPU)
 end
 
+command 'watch' 'address' 'Watch for changes to a memory address' [[
+  Watches for changes to a memory address. Whenever the value at the address
+  changes, it outputs the state of the CPU afterwards.
+]]
+function commands.watch.fn(CPU, address)
+  CPU:add_watch(tonumber(address))
+end
+
 return { main=main }
