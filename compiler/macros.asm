@@ -10,12 +10,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Flag to determine if we're in the middle of a macroexpansion, and should jump
-; back to macro_origin when we hit the end.
+; back to the callsite when we reach the end.
 :&in_macroexpansion.
-
-; Offset in the input file where we hit the macro reference we're currently
-; expanding.
-:&macro_origin.
 
 ; Address of the macro we are about to invoke once we finish reading the
 ; arguments.
@@ -34,6 +30,13 @@
 ; %7
 ; %8
 ; %9
+
+; Stack of macro callsites and arguments. A stack frame consists of the offset
+; in the file at which the macroexpansion was invoked (i.e. where we need to
+; seek back to when expansion finishes). SP points to the next *unused* stack
+; slot.
+:&macro_sp.
+:&macro_stack.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Macro_Begin
@@ -87,18 +90,20 @@ M = 0|D
 D = 0|M
 @ :MainLoop.
 = 0|D =
-; If we get this far we're in a macroexpansion. Clear the macroexpansion flag
-; and seek back to the origin.
+; If we get this far we're in a macroexpansion. Decrement the macroexpansion
+; flag and seek back to the point at which we were called.
 ; Note that this does not call EndOfLine_Continue -- as far as the main loop
 ; is concerned, it read a ] which was ignored and then it read the rest of the
 ; line we seek back to.
 @ :&in_macroexpansion.
-M = 0&D
-; fseek gets frozen when we're in a macroexpansion so we can use it here to
-; reset to where the macro was called from -- specifically, the start of the
-; line immediately after it was called.
-@ :&fseek.
+M = M-1
+; decrement macro stack pointer and restore previous fseek value
+@ :&macro_sp.
+M = M-1
+A = 0|M
 D = 0|M
+@ :&fseek.
+M = 0|D
 @ 077760 ; &stdin_status
 M = 0|D ; seek
 @ :MainLoop.
@@ -188,11 +193,22 @@ M = 0|D
 ; all the arguments, if any.
   :Macro_Expand_Call.
 @ :&in_macroexpansion.
-M = 0+1
+M = M+1
+; push the current fseek onto the macro stack
+@ :&fseek.
+D = 0|M
+@ :&macro_sp.
+A = 0|M
+M = 0|D ; store current fseek at top of macro stack
+@ :&macro_sp.
+M = M+1 ; inc sp
+; seek to the address of the macro definition
 @ :&macro_address.
 D = 0|M
 @ 077760 ; stdin_status
-M = 0|D ; seek back to the remembered address
+M = 0|D
+@ :&fseek.
+M = 0|D
 ; We jump back to mainloop here because the line containing the macroexpansion
 ; should be replaced with the first line of the macro, not with a no-op
 ; but this means that the state is still set to Sym_Read

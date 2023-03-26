@@ -21,6 +21,11 @@ D = 0|A
 M = 0|D
 @ :&line.  ; initialize line number to 1
 M = 0+1
+; initialize macroexpansion stack
+@ :&macro_stack.
+D = 0|A
+@ :&macro_sp.
+M = 0|D
 ; Fall through to :NewInstruction
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -63,16 +68,9 @@ D = 0|M
 D = 0|M
 @ :&char.
 M = 0|D
-; Increment the fseek counter, unless we're inside a macroexpansion, in which
-; case fseek gets frozen so we know where to return to.
-@ :&in_macroexpansion.
-D = 0|M
-@ :MainLoop_SkipFseekIncrement.
-= 0|D <>
-  :MainLoop_IncrementFseek.
+; Increment the fseek counter
 @ :&fseek.
 M = M+1
-  :MainLoop_SkipFseekIncrement.
 ; If it's a newline, run the end-of-line routine.
 @ :&char.
 D = 0|M
