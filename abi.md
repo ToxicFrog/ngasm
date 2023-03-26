@@ -190,7 +190,7 @@ LOCALS -> SP -> | empty          | unused stack space
 ```
 
 And then increase the stack pointer to make room. This gives the stack as it
-executes just before the actual function starts executing, annotated with
+exists just before the actual function starts executing, annotated with
 additional information about what the callee should and shouldn't do with it:
 
 ```
