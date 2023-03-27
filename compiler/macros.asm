@@ -17,19 +17,8 @@
 ; arguments.
 :&macro_address.
 
-; Arguments! Set when we hit a macroexpansion and spliced into the body in
-; Val_Read via %x expressions.
-:&macro_argp. ; pointer to current argument to read
-:&macro_argv. ; %0
-; %1
-; %2
-; %3
-; %4
-; %5
-; %6
-; %7
-; %8
-; %9
+; Pointer to macro argument we're currently reading in.
+:&macro_argp.
 
 ; Stack of macro callsites and arguments. A stack frame consists of the offset
 ; in the file at which the macroexpansion was invoked (i.e. where we need to
@@ -106,6 +95,11 @@ D = 0|M
 M = 0|D
 @ 077760 ; &stdin_status
 M = 0|D ; seek
+; drop this whole stack frame
+@ 012
+D = 0|A
+@ :&macro_sp.
+M = M-D
 @ :MainLoop.
 = 0|D <=>
 
@@ -152,13 +146,12 @@ M = 0|D ; copy the resolved value into macro_address
 D = 0|M
 @ :Macro_Expand_Call.
 = 0|D = ; if char is \0, no arguments, call immediately
-; there must be arguments, so set up the argv pointer and start reading them
-; in with Val_Read.
+; there must be arguments, so start reading them with Val_Read
   :Macro_Expand_WithArguments.
-@ :&macro_argv.
-D = 0|A
+@ :&macro_sp.
+D = 0|M
 @ :&macro_argp.
-M = 0|D ; set argp to point at the start of argv
+M = 0|D ; set argp to point at the start of the current macro stack frame
 @ :Macro_Expand_ArgDone.
 D = 0|A
 @ :&val_next.
@@ -194,14 +187,18 @@ M = 0|D
   :Macro_Expand_Call.
 @ :&in_macroexpansion.
 M = M+1
-; push the current fseek onto the macro stack
+; Advance the macro stack pointer 11 words (10 arguments + return address)
+@ 013
+D = 0|A
+@ :&macro_sp.
+M = M+D
+; push the current fseek onto the macro stack. The pointer points at the first
+; empty slot, so we need to subtract 1 from it to get the right address.
 @ :&fseek.
 D = 0|M
 @ :&macro_sp.
-A = 0|M
+A = M-1
 M = 0|D ; store current fseek at top of macro stack
-@ :&macro_sp.
-M = M+1 ; inc sp
 ; seek to the address of the macro definition
 @ :&macro_address.
 D = 0|M

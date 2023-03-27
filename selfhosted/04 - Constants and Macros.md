@@ -139,6 +139,10 @@ And a macro reference:
 ~macro-name
 ```
 
+Macro calls can be safely nested, although there is a macro stack limit of about
+100 nested calls; exceeding this will cause the compiler to crash in mysterious
+ways.
+
 #### Macro Arguments
 
 Arguments can be passed to a macro by appending them to the macro call with
@@ -157,8 +161,15 @@ a single decimal digit with `%`:
 ```
 [macro
   @ %0
+  D = 0|A
+  @ %1
+  D = D-A
 ]
 ```
+
+Note that the commas separating the arguments are absolutely mandatory; as
+usual, if you omit them the compiler will crash, usually with an out of bounds
+memory read.
 
 ### Instruction format
 

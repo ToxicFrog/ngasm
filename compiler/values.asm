@@ -205,7 +205,7 @@ M = 0+D
 = 0|D <=>
 
 ; Called to read a macro argument. Read one decimal digit and return
-; *(macro_argv + digit).
+; *(*macro_sp - 11 + digit).
   :Val_Read_MacroArg.
 @ :Val_Read_MacroArg_State.
 D = 0|A
@@ -225,10 +225,13 @@ A = 0|M
 @ :&char.
 D = 0|M
 @ 060 ; '0'
-D = D-A
-@ :&macro_argv.
-A = A+D
-D = 0|M
+D = D-A ; D contains the digit now, 0-9
+@ 013
+D = D-A ; subtract 11
+@ :&macro_sp.
+A = 0|M ; read current macro stack pointer
+A = A+D ; add our offset, which is now between -11 and -2
+D = 0|M ; dereference to read the value into D, then store it in value
 @ :&value.
 M = 0|D
 ; and then return to the main loop
