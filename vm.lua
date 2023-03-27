@@ -7,6 +7,8 @@ local vmutil = require 'vmutil'
 local vm = {}
 vm.__index = vm
 
+local MAX_RAM = 2^15
+
 -- Create a new VM. Initially it has no program loaded, calls to run() will halt
 -- immediately and calls to step() will raise an error. Use :flash() to load a
 -- program before starting it.
@@ -33,7 +35,7 @@ end
 -- Reset the VM: set all registers and RAM to 0, and reopen any IO channels.
 function vm:reset()
   self.A, self.D, self.IR, self.PC, self.CLK = 0,0,0,0,0
-  self.ram = vmutil.fill(0, 0, 2^15)
+  self.ram = vmutil.fill(0, 0, MAX_RAM)
   self.stdin = vmutil.reopen(self.stdin, self.infile, 'rb')
   self.stdout = vmutil.reopen(self.stdout, self.outfile, 'wb')
   for _,dev in pairs(self.dev) do
@@ -150,7 +152,7 @@ function vm:__tostring()
   -- an MMIO device we don't want to actuate it while printing the VM state!
   return string.format("VM (IR:%-20s CLK:%04X D:%04X A:%04X MEM:%04X PC:%04X @ %s)",
     vmutil.decode(self.IR),
-    self.CLK, self.D, self.A, self.ram[self.A], self.PC,
+    self.CLK, self.D, self.A, self.ram[self.A] or 0xFFFF, self.PC,
     self.sourcemap[self.PC] or "(missing)")
     --self.rom[self.PC] and vmutil.decode(self.rom[self.PC]) or '----')
 end
@@ -158,6 +160,8 @@ end
 -- Read RAM at the given address. This might return actual memory contents
 -- or it might return some sort of memory mapped IO.
 function vm:ram_read(address)
+  assert(address >= 0 and address < MAX_RAM,
+    string.format("Out of bounds memory read $%04X\n%s", address, tostring(self)))
   local dev,devaddr = vmutil.find_mmio(self.dev, address)
   if dev then
     return dev:read(devaddr)
@@ -168,6 +172,9 @@ end
 -- Write to RAM at the given address. As with ram_read this might store something
 -- in ram or it might do memory mapped IO.
 function vm:ram_write(address, word)
+  assert(address >= 0 and address < MAX_RAM,
+    string.format("Out of bounds memory write $%04X <- %d\n%s",
+      address, word, tostring(self)))
   local dev,devaddr = vmutil.find_mmio(self.dev, address)
   if dev then
     dev:write(devaddr, word)
