@@ -130,13 +130,11 @@ function commands.flash.fn(CPU, path)
       -- assume xxd hexdump
       data = xxd2bin(data)
     end
-    CPU:flash(data)
-    printf("Flashed %d words to ROM.\n", #data+1)
   else
     assert(#data % 2 == 0, "ROM image has an odd number of bytes")
-    CPU:flash(data)
-    printf("Flashed %d words to ROM.\n", #data/2)
   end
+  CPU:flash(data)
+  printf("Flashed %d words to ROM. Read %d debug symbols.\n", #CPU.rom, #CPU.symbols)
 end
 
 command 'source' '</path/to/source.asm>' 'Load source code for debugging' [[
@@ -146,7 +144,11 @@ command 'source' '</path/to/source.asm>' 'Load source code for debugging' [[
 ]]
 function commands.source.fn(CPU, path)
   CPU:source(path)
-  printf("Loaded %s as source code.", path)
+  local nlabels = 0
+  for _,sym in ipairs(CPU.symbols) do
+    if sym.name then nlabels = nlabels + 1 end
+  end
+  printf("Loaded %s as source code. Identified %d labels.\n", path, nlabels)
 end
 
 command 'reset' '' 'Reset the emulator' [[
@@ -203,6 +205,16 @@ command 'watch' 'address' 'Watch for changes to a memory address' [[
 ]]
 function commands.watch.fn(CPU, address)
   CPU:add_watch(tonumber(address))
+end
+
+command 'symbols' '' 'List the contents of the symbol table' [[
+  Displays the contents of the debug symbol table, if any, in the format:
+    %hash $address name
+]]
+function commands.symbols.fn(CPU)
+  for _,sym in ipairs(CPU.symbols) do
+    printf('%5d $%04X %s\n', sym.hash, sym.addr, sym.name or '')
+  end
 end
 
 return { main=main }

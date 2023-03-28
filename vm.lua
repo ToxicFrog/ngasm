@@ -23,8 +23,8 @@ function vm.new()
     -- peripherals
     dev = {};
     -- debugging
-    sourcemap = {};
     watches = {};
+    symbols = {};
   }
 
   setmetatable(new_vm, vm)
@@ -53,7 +53,36 @@ function vm:flash(rom)
   else
     self.rom = vmutil.string_to_words(rom)
   end
+  self.symbols = {}
+  local symsize = self.rom[#self.rom]
+  -- rough heuristic for whether there is actually a symbol table at the end
+  -- of the ROM.
+  if symsize % 2 == 0 and symsize > 0 and symsize < #self.rom/4 then
+    for addr = #self.rom - symsize,#self.rom-2,2 do
+      local sym = { hash = self.rom[addr], addr = self.rom[addr+1] }
+      table.insert(self.symbols, sym)
+    end
+  end
+  table.sort(self.symbols, function(x,y) return x.addr < y.addr end)
   return self
+end
+
+local function nghash(str)
+  local hash = 0
+  for char in str:gmatch('.') do
+    hash = hash*2 + char:byte()
+  end
+  return hash
+end
+
+local function bind(self, name, hash)
+  for _,sym in ipairs(self.symbols) do
+    if sym.hash == hash then
+      sym.name = name
+      return
+    end
+  end
+  error("Symbol " .. name .. " has no entry in symbol table with hash " .. hash)
 end
 
 -- Load the given file as the source code for the loaded ROM.
@@ -61,17 +90,14 @@ end
 function vm:source(source)
   local label = "(start)"
   local label_addr = 0
-  local ir = 0
-  self.sourcemap = {}
+  local nlabels = 0
   for line in io.lines(source) do
+    -- we only look for labels here; other symbols either point into RAM or
+    -- into the source file, not into ROM.
     if line:match('^%s*:.*') then
       label = line:gsub('%s', ''):gsub(';.*', '')
-      label_addr = ir
-      self.sourcemap[ir] = '\x1B[1m'..label..'\x1B[0m'
-    else
-      self.sourcemap[ir] = label .. '+' .. (ir - label_addr)
+      bind(self, label, nghash(label))
     end
-    ir = ir + 1
   end
 end
 
@@ -145,6 +171,18 @@ function vm:dispatch(op)
   end
 end
 
+function vm:pc_to_source(pc)
+  local label = "(start)"
+  for _,sym in ipairs(self.symbols) do
+    if sym.addr < pc and sym.name then
+      label = sym.name.."+"..(pc - sym.addr)
+    elseif sym.addr == pc and sym.name then
+      label = sym.name
+    end
+  end
+  return label
+end
+
 -- Output the VM state as a human-readable string, for debugging. Will be called
 -- automatically by print(), tostring(), etc.
 function vm:__tostring()
@@ -153,8 +191,7 @@ function vm:__tostring()
   return string.format("VM (IR:%-20s CLK:%04X D:%04X A:%04X MEM:%04X PC:%04X @ %s)",
     vmutil.decode(self.IR),
     self.CLK, self.D, self.A, self.ram[self.A] or 0xFFFF, self.PC,
-    self.sourcemap[self.PC] or "(missing)")
-    --self.rom[self.PC] and vmutil.decode(self.rom[self.PC]) or '----')
+    self:pc_to_source(self.PC))
 end
 
 -- Read RAM at the given address. This might return actual memory contents
