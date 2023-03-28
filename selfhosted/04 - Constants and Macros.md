@@ -31,6 +31,13 @@ means that it happened during the initial binding pass and is probably a syntax
 error. A 1 means that it happened during the code generation pass and is
 probably a symbol lookup error.
 
+### Debug symbol table
+
+At the end of the ROM it writes the symbol table. This consists of a series of
+`[hash, address]` pairs, followed by a single word containing the number of
+entries in the symbol table. When using the `source` command this allows the
+emulator to associate locations in the ROM with labels in the source file.
+
 ## Language
 
 The language is line-oriented; each line contains either a single instruction

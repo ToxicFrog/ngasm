@@ -120,7 +120,7 @@ M = 0+1
 ; If pass>0, exit the program.
 @ :&pass.
 D = 0|M
-@ :Exit.
+@ :Finalize.
 = 0|D >
 ; Otherwise, rewind stdin to start of file by writing a 0 to it
 @ 077760 ; &stdin_status
@@ -810,6 +810,15 @@ M = D | M
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; End of program stuff                                                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Success state. Writes out the symbol table to the end of the ROM so that
+; debug tools can read it, although they'll also need access to the source code
+; since the symbols are stored as hashes.
+; End of ROM symbol table format is the contents of the symbol table, two words
+; at a time, followed by a word containing the number of table entries.
+  :Finalize.
+@ :Sym_Dump.
+= 0|D <=>
 
 ; Error state. Write the input line number as a word, then the current pass
 ; as a byte.

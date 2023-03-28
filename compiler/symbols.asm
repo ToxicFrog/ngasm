@@ -235,3 +235,43 @@ A = 0|M
 ; pass != 0, raise an error.
 @ :Error.
 = 0|D <=>
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Sym_Resolve                                                                ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Called at the end of the program, after successfully writing a ROM image.
+; Dumps the symbol table to stdout in a debugger-friendly format.
+  :Sym_Dump.
+@ :&symbols.
+D = 0|A
+@ :&this_sym.
+M = 0|D
+  :Sym_Dump_Iter.
+; this_sym == last_sym? break
+@ :&this_sym.
+D = 0|M
+@ :&last_sym.
+D = D-M
+@ :Sym_Dump_Done.
+= 0|D =
+; else dump next table entry and increment this_sym
+@ :&this_sym.
+A = 0|M
+D = 0|M
+@ 077772 ; &stdout_words
+M = 0|D
+@ :&this_sym.
+M = M+1
+@ :Sym_Dump_Iter.
+= 0|D <=>
+  :Sym_Dump_Done.
+; write total symbol count and then exit program
+@ :&symbols.
+D = 0|A
+@ :&last_sym.
+D = M-D
+@ 077772 ; &stdout_words
+M = 0|D
+@ :Exit.
+= 0|D <=>
