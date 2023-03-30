@@ -24,7 +24,8 @@ The first two bytes are a big-endian word holding the line number of the input
 file at which the error occurred. In the case of macros, if the error occurred
 during initial parsing of the macro, the line number will be inside the macro
 definition; if it occurred during macro expansion, it will point to the place
-where the macro was invoked.
+where the macro was invoked. Depending on the circumstances, it may point to the
+line immediately after the error.
 
 The third byte indicates what pass of the compiler the error occurred on. A 0
 means that it happened during the initial binding pass and is probably a syntax

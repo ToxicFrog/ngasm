@@ -149,18 +149,6 @@ M = 0+1
 ; states which cannot appear at EOL will react by calling Error, other states
 ; should do whatever cleanup they need to do and then call EndOfLine_Continue.
   :EndOfLine.
-@ :&char.
-M = 0&D
-@ :&state.
-A = 0|M
-= 0|D <=>
-
-; Called after state cleanup, and checks pass to know what to do.
-; In pass 0, it increments pc so that we know what addresses to associate with
-; labels when we encounter them; in pass 1 it actually emits code.
-; In either case it calls NewInstruction afterwards to reset the parser state,
-; opcode buffer, etc.
-  :EndOfLine_Continue.
 ; If we're in a macro, don't increment line number
 @ :in_macroexpansion.
 D = 0|M
@@ -169,6 +157,19 @@ D = 0|M
 @ :&line.
 M = M+1
   :EndOfLine_NoLineNum.
+@ :&char.
+M = 0&D
+@ :&state.
+A = 0|M
+= 0|D <=>
+
+
+; Called after state cleanup, and checks pass to know what to do.
+; In pass 0, it increments pc so that we know what addresses to associate with
+; labels when we encounter them; in pass 1 it actually emits code.
+; In either case it calls NewInstruction afterwards to reset the parser state,
+; opcode buffer, etc.
+  :EndOfLine_Continue.
 ; If pass == 0, call _FirstPass, else _SecondPass.
 @ :&pass.
 D = 0|M
