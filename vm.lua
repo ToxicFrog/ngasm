@@ -82,20 +82,16 @@ local function bind(self, name, hash)
       return
     end
   end
-  error("Symbol " .. name .. " has no entry in symbol table with hash " .. hash)
 end
 
 -- Load the given file as the source code for the loaded ROM.
 -- This will be used to display labels in trace mode.
 function vm:source(source)
-  local label = "(start)"
-  local label_addr = 0
-  local nlabels = 0
   for line in io.lines(source) do
     -- we only look for labels here; other symbols either point into RAM or
     -- into the source file, not into ROM.
     if line:match('^%s*:.*') then
-      label = line:gsub('%s', ''):gsub(';.*', '')
+      local label = line:gsub('%s', ''):gsub(';.*', '')
       bind(self, label, nghash(label))
     end
   end
