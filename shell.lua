@@ -10,6 +10,7 @@ Commands to be implemented:
   screen <addr> <w> <h> -- attach raster display
 ]]
 local vm = require "vm"
+local vmutil = require 'vmutil'
 
 local commands = {}
 local function command(name)
@@ -214,6 +215,25 @@ command 'symbols' '' 'List the contents of the symbol table' [[
 function commands.symbols.fn(CPU)
   for _,sym in ipairs(CPU.symbols) do
     printf('%5d $%04X %s\n', sym.hash, sym.addr, sym.name or '')
+  end
+end
+
+command 'list' '' 'Disassemble the loaded ROM' [[
+  Disassembles the contents of ROM. Each line has the format:
+    RRRR - $IIII [desc]    :Label+n
+  Where R is the ROM address, I the underlying opcode, desc the human-
+  readable description of the operation, label the most recent label in
+  the source code, and +n the number of words of ROM past that label we
+  are. Label information is only available if the source code is loaded
+  (with the "source" command) and the ROM contains a symbol table.
+]]
+function commands.list.fn(CPU)
+  for addr,word in ipairs(CPU.rom) do
+    local op = vmutil.decode(word)
+    if not op.is_nop then
+      printf('%04X - $%-32s %s\n',
+        addr, tostring(op), CPU:pc_to_source(addr))
+    end
   end
 end
 

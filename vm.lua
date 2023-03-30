@@ -57,6 +57,9 @@ function vm:flash(rom)
   local symsize = self.rom[#self.rom]
   -- rough heuristic for whether there is actually a symbol table at the end
   -- of the ROM.
+  -- TODO: don't even attempt to load this until told to load the source
+  -- code; then mark this as the symbol table and possibly trim it from
+  -- the end of the ROM or otherwise hide it from LIST.
   if symsize % 2 == 0 and symsize > 0 and symsize < #self.rom/4 then
     for addr = #self.rom - symsize,#self.rom-2,2 do
       local sym = { hash = self.rom[addr], addr = self.rom[addr+1] }
