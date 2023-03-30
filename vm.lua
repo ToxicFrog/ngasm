@@ -70,7 +70,7 @@ end
 local function nghash(str)
   local hash = 0
   for char in str:gmatch('.') do
-    hash = hash*2 + char:byte()
+    hash = (hash*2 + char:byte()) % 0x10000
   end
   return hash
 end
@@ -173,6 +173,9 @@ end
 
 function vm:pc_to_source(pc)
   local label = "(start)"
+  if pc > 0 then
+    label = label.."+"..pc
+  end
   for _,sym in ipairs(self.symbols) do
     if sym.addr < pc and sym.name then
       label = sym.name.."+"..(pc - sym.addr)
