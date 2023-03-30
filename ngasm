@@ -5,9 +5,9 @@
 # like so:
 # $ ngasm input.asm /dev/stdout | xxd > output.hex
 
-ROM=${ROM:=ngasm.hex}
+ROM=${ROM:=stable/ngasm.hex}
+SRC=${SRC:=stable/ngasm.asm}
 MODE=${MODE:=run}
-SRC=${SRC:=/dev/null}
 
 rlwrap luajit main.lua \
   "flash $ROM" \
