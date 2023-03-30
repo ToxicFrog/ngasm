@@ -103,7 +103,9 @@ function vm:run(n)
 end
 
 function vm:trace(n, fn)
-  fn = fn or print
+  fn = fn or function(vm)
+    if not vmutil.decode(vm.IR).is_nop then print(vm) end
+  end
   n = n or math.huge
   for i=1,n do
     if not self.rom[self.PC] then

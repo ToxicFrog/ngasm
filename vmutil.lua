@@ -38,8 +38,12 @@ local function isset(n, bit_index)
   return bit.band(n, 2^bit_index) ~= 0
 end
 
--- Turn an opcode into a human-readable string
+-- Turn an opcode into a human-readable string. Returns nil if it's a no-op.
 local function op_to_str(op)
+  if op.is_nop then
+    return string.format('%04X [nop]', op.opcode)
+  end
+
   if not op.ci then
     return string.format('%04X [A = %d]', op.opcode, op.opcode)
   end
@@ -120,6 +124,11 @@ function vmutil.decode(opcode)
     eq = isset(opcode, 0x1); -- jump if equal
     gt = isset(opcode, 0x0); -- jump if greater than
   }
+  -- no-ops are computation instructions that have no jump bits and no
+  -- write bits set
+  op.is_nop = op.ci
+    and not (op.lt or op.gt or op.eq)
+    and not (op.a or op.d or op.m)
   return setmetatable(op, {__tostring = op_to_str})
 end
 
