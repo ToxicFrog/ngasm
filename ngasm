@@ -13,5 +13,19 @@ vm/vm \
   "flash $ROM" \
   "source $SRC" \
   "file $1 0x7FF0" \
-  "file $2 0x7FF8 wb" \
-  "$MODE"
+  "file /dev/stdout 0x7FF8 wb" \
+  "$MODE" \
+| xxd > "$2"
+
+if [[ ! -f $2 ]]; then
+  exit $?
+fi
+
+# If the output was to a normal file, check its size to see if the build
+# succeeded.
+size=$(xxd -r "$2" | wc -c)
+if (( size % 2 == 1 )); then
+  echo -n "Build failed: "
+  tail -n1 "$2"
+  exit 1
+fi
