@@ -12,7 +12,7 @@ MODE=${MODE:=run}
 
 cat compiler/*.asm > ngasm.asm
 
-luajit main.lua \
+vm/vm \
   "flash $ROM" \
   "file ngasm.asm 0x7FF0" \
   "file /dev/stdout 0x7FF8 wb" \
@@ -24,7 +24,7 @@ if (( ($(xxd -r next.hex | wc -c) % 2) == 1 )); then
   exit 1
 fi
 
-  # luajit main.lua \
+  # vm/vm \
   #   "watch 33" \
   #   "watch 67" \
   #   "watch 68" \
@@ -37,12 +37,12 @@ fi
   # exit
 
 if [[ $MODE == run ]]; then
-  luajit main.lua \
+  vm/vm \
     "flash next.hex" \
     "file test.asm 0x7FF0" \
     "file /dev/stdout 0x7FF8 wb" run | xxd
 else
-  luajit main.lua \
+  vm/vm \
     "flash next.hex" \
     "source ngasm.asm" \
     "file test.asm 0x7FF0" \

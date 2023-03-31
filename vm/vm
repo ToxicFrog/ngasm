@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+LUA=${LUA:=luajit}
+VMDIR="$(dirname "$0")"
+export LUA_PATH="$VMDIR/?.lua;;"
+
+$LUA "$VMDIR/main.lua" "$@"
