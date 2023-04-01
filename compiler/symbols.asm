@@ -237,12 +237,13 @@ A = 0|M
 = 0|D <=>
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Sym_Resolve                                                                ;;
+;; Sym_Dump                                                                   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Called at the end of the program, after successfully writing a ROM image.
 ; Dumps the symbol table to stdout in a debugger-friendly format.
   :Sym_Dump.
+~function,0
 @ :&symbols.
 D = 0|A
 @ :&this_sym.
@@ -273,5 +274,4 @@ D = 0|A
 D = M-D
 @ 077772 ; &stdout_words
 M = 0|D
-@ :Exit.
-= 0|D <=>
+~return

@@ -819,7 +819,9 @@ M = D | M
 ; End of ROM symbol table format is the contents of the symbol table, two words
 ; at a time, followed by a word containing the number of table entries.
   :Finalize.
-@ :Sym_Dump.
+~call,:Sym_Dump.,0
+~drop
+@ :Exit.
 = 0|D <=>
 
 ; Error state. Write the input line number as a word, then the current pass
