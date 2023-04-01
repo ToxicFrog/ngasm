@@ -7,6 +7,13 @@
 
 &SP = 0
 
+[stack/init
+  @ %0
+  D = 0|A
+  @ &SP
+  M = 0|D
+]
+
 ; pushd ( -- A )
 ; pushes the value of D onto the stack.
 [pushd

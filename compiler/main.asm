@@ -15,6 +15,7 @@
 ; It sets last_sym to point to the start of the symbol table so that we
 ; write symbols to the right place.
   :Init.
+~stack/init,$4000
 @ :&symbols.
 D = 0|A
 @ :&last_sym.
