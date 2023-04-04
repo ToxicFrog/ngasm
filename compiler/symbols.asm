@@ -18,11 +18,11 @@
 
 ; Contains the hash of the current symbol. Read fills this in; Bind and
 ; Resolve both read it.
-:&symbol.
+&sym/name = $20
 
 ; Contains the value associated with a symbol. Bind reads it to get the symbol's
 ; value when creating a new binding, Resolve
-:&sym_value.
+&sym/value = $21
 
 ; Continuation. Since Read, Bind, and Resolve all get called by multiple places
 ; in the parser, and we don't actually have functions or, really, a stack at all
@@ -32,7 +32,7 @@
 ; the symbol input), it will *immediately* jump to whatever address this points
 ; to.
 ; Although note that on symbol resolution failure it will instead jump to Error.
-:&sym_next.
+&sym/next = $22
 
 ;;;; Private Variables ;;;;
 ; These are internal workings of the symbol table; do not touch!
@@ -40,11 +40,11 @@
 ; Pointer just past the end of the symbol table. To write a new symbol we put
 ; it here and then increment this pointer. When resolving a symbol, if we reach
 ; this point, we've gone too far.
-:&last_sym.
+&sym/last = $23
 
 ; Pointer to the current symbol we are looking at. Used during symbol resolution
 ; as scratch space.
-:&this_sym.
+&sym/this = $24
 
 ; The actual table. The table is an array of [symbol_hash, value] pairs
 ; occupying two words each and stored contiguously in memory.
@@ -67,12 +67,12 @@
 ; itself. This allows it to set up internal structures it needs correctly.
   :Sym_Read.
 ; Clear the symbol hash
-@ :&symbol.
+@ &sym/name
 M = 0&D
 ; Update state pointer
 @ :Sym_Read_State.
 D = 0|A
-@ :&state.
+@ &core/state
 M = 0|D
 ; fall through to Sym_Read_State
 
@@ -83,36 +83,36 @@ M = 0|D
 ; *caller* is responsible for that!
   :Sym_Read_State.
 ; check for end of line
-@ :&char.
+@ &core/char
 D = 0|M
-@ :&sym_next.
+@ &sym/next
 A = 0|M
 = 0|D =
 ; check for comma and equals
-@ :&char.
+@ &core/char
 D = 0|M
 @ 054 ; ','
 D = D-A
-@ :&sym_next.
+@ &sym/next
 A = 0|M
 = 0|D =
 ; check for end of line
-@ :&char.
+@ &core/char
 D = 0|M
 @ 075 ; '='
 D = D-A
-@ :&sym_next.
+@ &sym/next
 A = 0|M
 = 0|D =
 ; Not at end, so add the just-read character to the label hash.
 ; First, double the existing hash to shift left 1 bit.
-@ :&symbol.
+@ &sym/name
 D = 0|M
 D = D+M
 ; Then add the new character to it.
-@ :&char.
+@ &core/char
 D = D+M
-@ :&symbol.
+@ &sym/name
 M = 0|D
 ; return to main loop
 @ :MainLoop.
@@ -133,25 +133,25 @@ M = 0|D
   :Sym_Bind.
 ; last_sym should already be pointing to the free slot at the end of the symbol
 ; table, so write the hash to it
-@ :&symbol.
+@ &sym/name
 D = 0|M ; D = symbol
-@ :&last_sym.
+@ &sym/last
 A = 0|M
 M = 0|D ; *last_sym = D
 ; increment last_sym so it points to the value slot
-@ :&last_sym.
+@ &sym/last
 M = M+1
 ; write the value we were given to that slot
-@ :&sym_value.
+@ &sym/value
 D = 0|M
-@ :&last_sym.
+@ &sym/last
 A = 0|M
 M = 0|D
 ; increment last_sym again so it points to the next, unused slot
-@ :&last_sym.
+@ &sym/last
 M = M+1
 ; call sym_next
-@ :&sym_next.
+@ &sym/next
 A = 0|M
 = 0|D <=>
 
@@ -182,26 +182,26 @@ A = 0|M
 ; Startup code - set this_sym = &symbols
 @ :&symbols.
 D = 0|A
-@ :&this_sym.
+@ &sym/this
 M = 0|D
   :Sym_Resolve_Loop.
 ; Are we at the end of the symbol table? If so, error out.
-@ :&last_sym.
+@ &sym/last
 D = 0|M
-@ :&this_sym.
+@ &sym/this
 D = D-M
 @ :Sym_Resolve_Error.
 = 0|D =
 ; Check if the current symbol is the one we're looking for.
-@ :&this_sym.
+@ &sym/this
 A = 0|M ; fixed?
 D = 0|M
-@ :&symbol.
+@ &sym/name
 D = D-M
 @ :Sym_Resolve_Success.
 = 0|D =
 ; It wasn't :( Advance this_sym by two to point to the next entry, and loop.
-@ :&this_sym.
+@ &sym/this
 M = M+1
 M = M+1
 @ :Sym_Resolve_Loop.
@@ -211,14 +211,14 @@ M = M+1
 ; a pointer to the label cell of the entry, so we need to inc it to get the
 ; value cell.
   :Sym_Resolve_Success.
-@ :&this_sym.
+@ &sym/this
 A = M+1
 D = 0|M
 ; now write the value into &sym_value so the caller can fetch it
-@ :&sym_value.
+@ &sym/value
 M = 0|D
 ; return control to the caller
-@ :&sym_next.
+@ &sym/next
 A = 0|M
 = 0|D <=>
 
@@ -227,9 +227,9 @@ A = 0|M
 ; return whatever is currently in sym_value.
 ; On pass 2, we error out.
   :Sym_Resolve_Error.
-@ :&pass.
+@ &core/pass
 D = 0|M
-@ :&sym_next.
+@ &sym/next
 A = 0|M
 = 0|D =
 ; pass != 0, raise an error.
@@ -246,23 +246,23 @@ A = 0|M
 ~function,0
 @ :&symbols.
 D = 0|A
-@ :&this_sym.
+@ &sym/this
 M = 0|D
   :Sym_Dump_Iter.
 ; this_sym == last_sym? break
-@ :&this_sym.
+@ &sym/this
 D = 0|M
-@ :&last_sym.
+@ &sym/last
 D = D-M
 @ :Sym_Dump_Done.
 = 0|D =
 ; else dump next table entry and increment this_sym
-@ :&this_sym.
+@ &sym/this
 A = 0|M
 D = 0|M
-@ 077772 ; &stdout_words
+@ &stdout.words
 M = 0|D
-@ :&this_sym.
+@ &sym/this
 M = M+1
 @ :Sym_Dump_Iter.
 = 0|D <=>
@@ -270,8 +270,8 @@ M = M+1
 ; write total symbol count and then exit program
 @ :&symbols.
 D = 0|A
-@ :&last_sym.
+@ &sym/last
 D = M-D
-@ 077772 ; &stdout_words
+@ &stdout.words
 M = 0|D
 ~return

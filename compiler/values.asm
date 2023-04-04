@@ -19,10 +19,10 @@
 ;;;; Public Variables ;;;;
 
 ; The value just read.
-:&value.
+&val/value = $40
 
 ; The continuation to call once the value is read.
-:&val_next.
+&val/next = $41
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Val_Read
@@ -30,12 +30,12 @@
 
   :Val_Read.
 ; Clear the value buffer.
-@ :&value.
+@ &val/value
 M = 0&D
 ; Update state pointer
 @ :Val_Read_State.
 D = 0|A
-@ :&state.
+@ &core/state
 M = 0|D
 ; This is called when we know the next token is going to be a value, so we just
 ; return control to the mainloop. Val_Read_State will transfer control to
@@ -53,64 +53,64 @@ M = 0|D
 ; Sym_Read, so we set up the continuation for those ahead of time.
 @ :Val_Read_SymDone.
 D = 0|A
-@ :&sym_next.
+@ &sym/next
 M = 0|D
 ; Now check the actual characters
-@ :&char.
+@ &core/char
 D = 0|M
 @ 072 ; ':'
 D = D-A
 @ :Sym_Read.
 = 0|D =
-@ :&char.
+@ &core/char
 D = 0|M
 @ 043 ; '#'
 D = D-A
 @ :Sym_Read.
 = 0|D =
-@ :&char.
+@ &core/char
 D = 0|M
 @ 046 ; '&'
 D = D-A
 @ :Sym_Read.
 = 0|D =
 ; Now check for a character constant.
-@ :&char.
+@ &core/char
 D = 0|M
 @ 047 ; "'"
 D = D-A
 @ :Val_Read_Char.
 = 0|D =
 ; Relative jump address backwards?
-@ :&char.
+@ &core/char
 D = 0|M
 @ 055 ; '-'
 D = D-A
 @ :Val_Read_RelativeJump_Back.
 = 0|D =
 ; Relative jump address forwards?
-@ :&char.
+@ &core/char
 D = 0|M
 @ 053 ; '+'
 D = D-A
 @ :Val_Read_RelativeJump_Forward.
 = 0|D =
 ; Hex constant starting with $?
-@ :&char.
+@ &core/char
 D = 0|M
 @ 044 ; '$'
 D = D-A
 @ :Val_Read_Hex.
 = 0|D =
 ; Octal constant starting with 0?
-@ :&char.
+@ &core/char
 D = 0|M
 @ 060 ; '0'
 D = D-A
 @ :Val_Read_Oct.
 = 0|D =
 ; Macroexpansion argument?
-@ :&char.
+@ &core/char
 D = 0|M
 @ 045 ; '%'
 D = D-A
@@ -120,7 +120,7 @@ D = D-A
 ; state and then jump to it to process the first character.
 @ :Val_Read_Dec.
 D = 0|A
-@ :&state.
+@ &core/state
 M = 0|D
 @ :Val_Read_Dec.
 = 0|D <=>
@@ -131,7 +131,7 @@ M = 0|D
   :Val_Read_SymDone.
 @ :Val_Read_SymResolved.
 D = 0|A
-@ :&sym_next.
+@ &sym/next
 M = 0|D
 @ :Sym_Resolve.
 = 0|D <=>
@@ -139,11 +139,11 @@ M = 0|D
 ; Sym_Resolve is finished so copy the value it resolved into value and return
 ; control to our caller.
   :Val_Read_SymResolved.
-@ :&sym_value.
+@ &sym/value
 D = 0|M
-@ :&value.
+@ &val/value
 M = 0|D
-@ :&val_next.
+@ &val/next
 A = 0|M
 = 0|D <=>
 
@@ -153,26 +153,26 @@ A = 0|M
 ; Set ourself as the current state first
 @ :Val_Read_Char.
 D = 0|A
-@ :&state.
+@ &core/state
 M = 0+D
 ; If char is 0 we're at EOL and have nothing further to do
-@ :&char.
+@ &core/char
 D = 0|M
-@ :&val_next.
+@ &val/next
 A = 0|M
 = 0|D =
 ; If char is , this is an argument separator, same deal as EOL
-@ :&char.
+@ &core/char
 D = 0|M
 @ 054 ; ','
 D = D-A
-@ :&val_next.
+@ &val/next
 A = 0|M
 = 0|D =
 ; Otherwise just copy char into the value buffer
-@ :&char.
+@ &core/char
 D = 0|M
-@ :&value.
+@ &val/value
 M = 0+D
 @ :MainLoop.
 = 0|D <=>
@@ -189,7 +189,7 @@ M = 0+D
 M = 0-1
 @ :Val_Read_Dec_State.
 D = 0|A
-@ :&state.
+@ &core/state
 M = 0+D
 @ :MainLoop.
 = 0|D <=>
@@ -199,7 +199,7 @@ M = 0+D
 M = 0+1
 @ :Val_Read_Dec_State.
 D = 0|A
-@ :&state.
+@ &core/state
 M = 0+D
 @ :MainLoop.
 = 0|D <=>
@@ -209,30 +209,30 @@ M = 0+D
   :Val_Read_MacroArg.
 @ :Val_Read_MacroArg_State.
 D = 0|A
-@ :&state.
+@ &core/state
 M = 0+D
 @ :MainLoop.
 = 0|D <=>
 
   :Val_Read_MacroArg_State.
 ; if at end of line, call the continuation
-@ :&char.
+@ &core/char
 D = 0|M
-@ :&val_next.
+@ &val/next
 A = 0|M
 = 0|D =
 ; else read the corresponding argument into value
-@ :&char.
+@ &core/char
 D = 0|M
 @ 060 ; '0'
 D = D-A ; D contains the digit now, 0-9
 @ 013
 D = D-A ; subtract 11
-@ :&macro_sp.
+@ &macros/sp
 A = 0|M ; read current macro stack pointer
 A = A+D ; add our offset, which is now between -11 and -2
 D = 0|M ; dereference to read the value into D, then store it in value
-@ :&value.
+@ &val/value
 M = 0|D
 ; and then return to the main loop
 @ :MainLoop.
@@ -246,7 +246,7 @@ M = 0|D
   :Val_Read_Hex.
 @ :Val_Read_Hex_State.
 D = 0|A
-@ :&state.
+@ &core/state
 M = 0+D
 @ :MainLoop.
 = 0|D <=>
@@ -256,21 +256,21 @@ M = 0+D
 ; the digits A-F and a-f as corresponding to the values 10-15.
   :Val_Read_Hex_State.
 ; Check if we're at end of line, if so just do nothing
-@ :&char.
+@ &core/char
 D = 0|M
-@ :&val_next.
+@ &val/next
 A = 0|M
 = 0|D =
 ; If char is , this is an argument separator, same deal as EOL
-@ :&char.
+@ &core/char
 D = 0|M
 @ 054 ; ','
 D = D-A
-@ :&val_next.
+@ &val/next
 A = 0|M
 = 0|D =
 ; Start by making room in the value buffer
-@ :&value.
+@ &val/value
 D = 0|M
 ; Add D to M 15 times for a total of x16
 M = D+M
@@ -291,13 +291,13 @@ M = D+M
 ; Now we branch off depending on whether we have an a-f, A-F, or 0-9
 ; really simple checks here (no error catchment): if it's >= a we have a-f,
 ; otherwise if it's >= A we have A-F, otherwise it's 0-9.
-@ :&char.
+@ &core/char
 D = 0|M
 @ 0141 ; 'a'
 D = D-A
 @ :Val_Read_HexLower.
 = 0|D >=
-@ :&char.
+@ &core/char
 D = 0|M
 @ 0101 ; 'A'
 D = D-A
@@ -309,31 +309,31 @@ D = D-A
   :. ; for some reason we need a dummy label here or the definition of the
   ; following label doesn't stick.
   :Val_Read_HexLower.
-@ :&char.
+@ &core/char
 D = 0|M
 @ 0127 ; 'a' - 10
 D = D-A
-@ :&value.
+@ &val/value
 M = D+M
 @ :MainLoop.
 = 0|D <=>
 
   :Val_Read_HexUpper.
-@ :&char.
+@ &core/char
 D = 0|M
 @ 067 ; 'A' - 10
 D = D-A
-@ :&value.
+@ &val/value
 M = D+M
 @ :MainLoop.
 = 0|D <=>
 
   :Val_Read_HexNumeric.
-@ :&char.
+@ &core/char
 D = 0|M
 @ 060 ; '0'
 D = D-A
-@ :&value.
+@ &val/value
 M = D+M
 @ :MainLoop.
 = 0|D <=>
@@ -344,7 +344,7 @@ M = D+M
   :Val_Read_Dec.
 @ :Val_Read_Dec_State.
 D = 0|A
-@ :&state.
+@ &core/state
 M = 0+D
 ; fall through to state
 
@@ -352,19 +352,19 @@ M = 0+D
 ; Check if we're at end of line. If so we may need to do processing for relative
 ; jumps before we generate the opcode, and in either case we should then call
 ; the val_next continuation.
-@ :&char.
+@ &core/char
 D = 0|M
 @ :Val_Read_Dec_EOL.
 = 0|D =
 ; If char is , this is an argument separator, same deal as EOL
-@ :&char.
+@ &core/char
 D = 0|M
 @ 054 ; ','
 D = D-A
 @ :Val_Read_Dec_EOL.
 = 0|D =
 ; Start by making room in the value buffer
-@ :&value.
+@ &val/value
 D = 0|M
 ; Add D to M 9 times for a total of x10
 M = D+M
@@ -377,13 +377,13 @@ M = D+M
 M = D+M
 M = D+M
 ; Now add the next digit
-@ :&char.
+@ &core/char
 D = 0|M
 ; Subtract '0' to get a value in the range 0-9
 ; or out of the range if the user typed in some sort of garbage, oh well
 @ 060 ; '0'
 D = D-A
-@ :&value.
+@ &val/value
 M = D+M
 @ :MainLoop.
 = 0|D <=>
@@ -400,24 +400,24 @@ M = 0&D ; clear the flag, we have the value saved in D
 = 0|D <=>
 
   :Val_Read_Dec_JumpBack.
-@ :&pc.
+@ &core/pc
 D = 0|M
-@ :&value.
+@ &val/value
 M = D-M
 @ :Val_Read_Dec_Done.
 = 0|D <=>
 
   :Val_Read_Dec_JumpForward.
-@ :&pc.
+@ &core/pc
 D = 0|M
-@ :&value.
+@ &val/value
 M = D+M
 @ :Val_Read_Dec_Done.
 = 0|D <=>
 
   :Val_Read_Dec_Done.
 ; call the continuation
-@ :&val_next.
+@ &val/next
 A = 0|M
 = 0|D <=>
 
@@ -427,27 +427,27 @@ A = 0|M
   :Val_Read_Oct.
 @ :Val_Read_Oct_State.
 D = 0|A
-@ :&state.
+@ &core/state
 M = 0+D
 ; fall through to state
 
   :Val_Read_Oct_State.
 ; Check if we're at end of line, if so just do nothing
-@ :&char.
+@ &core/char
 D = 0|M
-@ :&val_next.
+@ &val/next
 A = 0|M
 = 0|D =
 ; If char is , this is an argument separator, same deal as EOL
-@ :&char.
+@ &core/char
 D = 0|M
 @ 054 ; ','
 D = D-A
-@ :&val_next.
+@ &val/next
 A = 0|M
 = 0|D =
 ; Start by making room in the value buffer
-@ :&value.
+@ &val/value
 D = 0|M
 ; Add D to M 7 times for a total of x8
 M = D+M
@@ -458,13 +458,13 @@ M = D+M
 M = D+M
 M = D+M
 ; Now add the next digit
-@ :&char.
+@ &core/char
 D = 0|M
 ; Subtract '0' to get a value in the range 0-7
 ; or out of the range if the user typed in some sort of garbage, oh well
 @ 060 ; '0'
 D = D-A
-@ :&value.
+@ &val/value
 M = D+M
 @ :MainLoop.
 = 0|D <=>

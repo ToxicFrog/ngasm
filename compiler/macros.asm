@@ -11,21 +11,23 @@
 
 ; Flag to determine if we're in the middle of a macroexpansion, and should jump
 ; back to the callsite when we reach the end.
-:&in_macroexpansion.
+&macros/in-expansion = $10
 
 ; Address of the macro we are about to invoke once we finish reading the
 ; arguments.
-:&macro_address.
+&macros/address = $11
 
 ; Pointer to macro argument we're currently reading in.
-:&macro_argp.
+&macros/argp = $12
 
 ; Stack of macro callsites and arguments. A stack frame consists of the offset
 ; in the file at which the macroexpansion was invoked (i.e. where we need to
 ; seek back to when expansion finishes). SP points to the next *unused* stack
 ; slot.
-:&macro_sp.
-:&macro_stack.
+&macros/sp = $13
+; this needs a lot of space, since each macro invokation takes 11 words on the
+; stack.
+&macros/stack = $3000
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Macro_Begin
@@ -36,7 +38,7 @@
 ; First, read in the name of the macro.
 @ :Macro_Begin_Bind.
 D = 0|A
-@ :&sym_next.
+@ &sym/next
 M = 0|D
 @ :Sym_Read.
 = 0|D <=>
@@ -48,19 +50,19 @@ M = 0|D
   :Macro_Begin_Bind.
 ; If we're on the second pass, do nothing here; the name of the macro is already
 ; in the symbol table and code generation will emit a no-op.
-@ :&pass.
+@ &core/pass
 D = 0|M
 @ :EndOfLine_Continue.
 = 0|D <>
 ; Otherwise we need to bind it. Set the continuation to EndOfLine_Continue,
 ; which is conveniently already in A.
 D = 0|A
-@ :&sym_next.
+@ &sym/next
 M = 0|D
 ; Now set the value to the current file offset.
-@ :&fseek.
+@ &core/fseek
 D = 0|M
-@ :&sym_value.
+@ &sym/value
 M = 0|D
 @ :Sym_Bind.
 = 0|D <=>
@@ -75,7 +77,7 @@ M = 0|D
 ; the input file back to where we came from.
   :Macro_End.
 ; Not in macroexpansion? Return to mainloop.
-@ :&in_macroexpansion.
+@ &macros/in-expansion
 D = 0|M
 @ :MainLoop.
 = 0|D =
@@ -84,21 +86,21 @@ D = 0|M
 ; Note that this does not call EndOfLine_Continue -- as far as the main loop
 ; is concerned, it read a ] which was ignored and then it read the rest of the
 ; line we seek back to.
-@ :&in_macroexpansion.
+@ &macros/in-expansion
 M = M-1
 ; decrement macro stack pointer and restore previous fseek value
-@ :&macro_sp.
+@ &macros/sp
 M = M-1
 A = 0|M
 D = 0|M
-@ :&fseek.
+@ &core/fseek
 M = 0|D
-@ 077760 ; &stdin_status
+@ &stdin.status
 M = 0|D ; seek
 ; drop this whole stack frame
 @ 012
 D = 0|A
-@ :&macro_sp.
+@ &macros/sp
 M = M-D
 @ :MainLoop.
 = 0|D <=>
@@ -113,11 +115,11 @@ M = M-D
 ; the symbol seen at macro definition time.
 @ 0133 ; '['
 D = 0|A
-@ :&char.
+@ &core/char
 M = 0|D
 @ :Macro_Expand_Resolve.
 D = 0|A
-@ :&sym_next.
+@ &sym/next
 M = 0|D
 @ :Sym_Read.
 = 0|D <=>
@@ -126,7 +128,7 @@ M = 0|D
   :Macro_Expand_Resolve.
 @ :Macro_Expand_ResolveDone.
 D = 0|A
-@ :&sym_next.
+@ &sym/next
 M = 0|D
 @ :Sym_Resolve.
 = 0|D <=>
@@ -138,23 +140,23 @@ M = 0|D
 ; TODO: macro argument support -- check if &char is \0 (eol) or , and if the
 ; latter, after resolving, do a Val_Read and set that as the macro argument.
   :Macro_Expand_ResolveDone.
-@ :&sym_value.
+@ &sym/value
 D = 0|M
-@ :&macro_address.
+@ &macros/address
 M = 0|D ; copy the resolved value into macro_address
-@ :&char.
+@ &core/char
 D = 0|M
 @ :Macro_Expand_Call.
 = 0|D = ; if char is \0, no arguments, call immediately
 ; there must be arguments, so start reading them with Val_Read
   :Macro_Expand_WithArguments.
-@ :&macro_sp.
+@ &macros/sp
 D = 0|M
-@ :&macro_argp.
+@ &macros/argp
 M = 0|D ; set argp to point at the start of the current macro stack frame
 @ :Macro_Expand_ArgDone.
 D = 0|A
-@ :&val_next.
+@ &val/next
 M = 0|D
 @ :Val_Read.
 = 0|D <=>
@@ -163,21 +165,21 @@ M = 0|D
 ; increment argp, and either read another one or invoke the macro depending
 ; on whether we're at EOL or not.
   :Macro_Expand_ArgDone.
-@ :&value.
+@ &val/value
 D = 0|M
-@ :&macro_argp.
+@ &macros/argp
 A = 0|M
 M = 0|D
-@ :&macro_argp.
+@ &macros/argp
 M = M+1
-@ :&char. ; char = \0? end of line, so call the macro
+@ &core/char ; char = \0? end of line, so call the macro
 D = 0|M
 @ :Macro_Expand_Call.
 = 0|D =
 ; otherwise look for another argument!
 @ :Macro_Expand_ArgDone.
 D = 0|A
-@ :&val_next.
+@ &val/next
 M = 0|D
 @ :Val_Read.
 = 0|D <=>
@@ -185,26 +187,26 @@ M = 0|D
 ; Called to actually invoke the macro once we've read in the macro address and
 ; all the arguments, if any.
   :Macro_Expand_Call.
-@ :&in_macroexpansion.
+@ &macros/in-expansion
 M = M+1
 ; Advance the macro stack pointer 11 words (10 arguments + return address)
 @ 013
 D = 0|A
-@ :&macro_sp.
+@ &macros/sp
 M = M+D
 ; push the current fseek onto the macro stack. The pointer points at the first
 ; empty slot, so we need to subtract 1 from it to get the right address.
-@ :&fseek.
+@ &core/fseek
 D = 0|M
-@ :&macro_sp.
+@ &macros/sp
 A = M-1
 M = 0|D ; store current fseek at top of macro stack
 ; seek to the address of the macro definition
-@ :&macro_address.
+@ &macros/address
 D = 0|M
-@ 077760 ; stdin_status
+@ &stdin.status
 M = 0|D
-@ :&fseek.
+@ &core/fseek
 M = 0|D
 ; We jump back to mainloop here because the line containing the macroexpansion
 ; should be replaced with the first line of the macro, not with a no-op
