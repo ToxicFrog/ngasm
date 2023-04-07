@@ -81,11 +81,11 @@ function commands.help.fn(_, name)
     end
     table.sort(helplist, function(x,y) return x.name < y.name end)
     for _,cmd in pairs(helplist) do
-      printf('%12s %-24s  %s\n', '\x1B[4m'..cmd.name..'\x1B[0m', cmd.args, cmd.desc)
+      printf('%16s\x1B[0m %-24s  %s\n', '\x1B[4m'..cmd.name, cmd.args, cmd.desc)
     end
   else
     local cmd = commands[name]
-    printf('\x1B[4m%12s %-24s  %s\x1B[0m\n', cmd.name, cmd.args, cmd.desc)
+    printf('%16s %-24s  %s\x1B[0m\n', '\x1B[4m'..cmd.name, cmd.args, cmd.desc)
     print()
     print(cmd.help)
   end
