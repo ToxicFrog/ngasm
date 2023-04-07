@@ -94,30 +94,33 @@ reading constants and symbols is pulled out into reusable procedures, which can
 be called from anywhere in the program and passed a continuation to call once
 finished.
 
-The literal reader drops support for octal and replaces it with support for
-decimal, hexadecimal, and character literals. It can also delegate to the symbol
+The literal reader adds support for decimal, hexadecimal, and character
+literals, as well as relative offsets in ROM. It can also delegate to the symbol
 reader if it encounters a symbol where a literal was expected.
 
 The symbol reader adds support for symbols starting with `#` or `&`, and removes
 the requirement that all symbols end with `.`.
 
-Constant support is added as a new parser branch, accessed by starting a line with
-`#` or `&`; by following the symbol with an `=` and then a value, you can bind
-names to arbitrary values.
+Constant support is added as a new parser branch, accessed by starting a line
+with `#` or `&`; by following the symbol with an `=` and then a value, you can
+bind names to arbitrary values.
 
 Very primitive error reporting is added, with the ability of the compiler to
-report the line number it was processing when it errored out.
+report the line number it was processing when it errored out. Some debugging
+support is added as well, by appending the assembler's symbol table to the
+generated ROM.
 
-Finally, the big new feature is macro support; macros can be defined as sequences
-of instructions, including arguments that can be provided at the call site and
-which are spliced into the body of the macro at evaluation time. Macros are not
-functions; they are evaluated during compilation and emit instructions directly
-into the generated binary at the point where they are called.
+Finally, the big new feature is macro support; macros can be defined as
+sequences of instructions, including arguments that can be provided at the call
+site and which are spliced into the body of the macro at evaluation time. Macros
+are not functions; they are evaluated during compilation and emit instructions
+directly into the generated binary at the point where they are called.
 
 Internally, this is implemented by recording, as the value of each macro, the
 offset in the file at which the macro starts. When a call to the macro is
-encountered, the current file offset is saved, and the input file is rewound to
-the point in the file where the macro starts. The contents of the macro are thus
-processed and output as if they occurred in the file at the point where the macro
-call is, and once the end of the macro definition is reached, the saved file
-offset is restored.
+encountered, the current file offset and macro arguments are saved to a stack,
+and the input file is rewound to the point in the file where the macro starts.
+The contents of the macro are thus processed and output as if they occurred in
+the file at the point where the macro call is, and once the end of the macro
+definition is reached, the saved file offset is popped restored. Macro calls can
+be nested 100+ levels deep, with up to ten arguments per call.
