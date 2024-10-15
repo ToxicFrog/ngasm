@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Run the assembler in the VM.
+# Usage: ngasm input.asm output.hex
+# The output will be in XXD hexdump format.
+# You can set the ROM environment variable to point to the compiler ROM image,
+# and SRC to point to the compiler source code (useful for debugging errors in
+# the compiler itself).
+
+vm/vm \
+  "flash $1" \
+  "source ${2:-/dev/null}" \
+  "list"
