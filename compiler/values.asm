@@ -221,7 +221,22 @@ D = 0|M
 @ &val/next
 A = 0|M
 = 0|D =
-; else read the corresponding argument into value
+; are we in macroexpansion? then we want MacroArg_Expansion below
+@ &macros/in-expansion
+D = 0|M
+@ :Val_Read_MacroArg_Expansion.
+= 0|D <>
+; otherwise we're in macro definition and just emit a placeholder value
+; this is a behaviour difference from stage 4, which emitted uninitialized
+; memory instead
+@ 0
+D = 0|A
+@ &val/value
+M = 0|D
+@ :Val_Read_MacroArg_Done.
+= 0|D <=>
+  :Val_Read_MacroArg_Expansion.
+; read the argument off the macroexpansion stack and store it into value
 @ &core/char
 D = 0|M
 @ 060 ; '0'
@@ -234,6 +249,7 @@ A = A+D ; add our offset, which is now between -11 and -2
 D = 0|M ; dereference to read the value into D, then store it in value
 @ &val/value
 M = 0|D
+  :Val_Read_MacroArg_Done.
 ; and then return to the main loop
 @ :MainLoop.
 = 0|D <=>
