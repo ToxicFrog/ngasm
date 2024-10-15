@@ -30,7 +30,12 @@ local function command(name)
 end
 
 local function printf(...)
-  return io.stderr:write(string.format(...))
+  io.stdout:write(string.format(...))
+  io.stdout:flush()
+end
+
+local function eprintf(...)
+  io.stderr:write(string.format(...))
 end
 
 local function run(CPU, line)
@@ -42,7 +47,7 @@ local function run(CPU, line)
   elseif commands[command] then
     commands[command].fn(CPU, unpack(argv))
   else
-    print('Unrecognized command: '..command)
+    eprintf('Unrecognized command: %s', command)
   end
 end
 
@@ -53,12 +58,10 @@ function main(CPU, commands)
     end
   else
     -- interactive mode
-    io.stdout:write('Emulator ready. Type "help" for a list of commands.\n> ')
-    io.stdout:flush()
+    printf('Emulator ready. Type "help" for a list of commands.\n> ')
     for line in io.lines() do
       run(CPU, line)
-      io.stdout:write('\n> ')
-      io.stdout:flush()
+      printf('\n> ')
     end
     print('Goodbye!')
   end
@@ -81,13 +84,12 @@ function commands.help.fn(_, name)
     end
     table.sort(helplist, function(x,y) return x.name < y.name end)
     for _,cmd in pairs(helplist) do
-      printf('%16s\x1B[0m %-24s  %s\n', '\x1B[4m'..cmd.name, cmd.args, cmd.desc)
+      eprintf('%16s\x1B[0m %-24s  %s\n', '\x1B[4m'..cmd.name, cmd.args, cmd.desc)
     end
   else
     local cmd = commands[name]
-    printf('%16s %-24s  %s\x1B[0m\n', '\x1B[4m'..cmd.name, cmd.args, cmd.desc)
-    print()
-    print(cmd.help)
+    eprintf('%16s %-24s  %s\x1B[0m\n\n', '\x1B[4m'..cmd.name, cmd.args, cmd.desc)
+    eprintf('%s\n', cmd.help)
   end
 end
 
@@ -135,7 +137,7 @@ function commands.flash.fn(CPU, path)
     assert(#data % 2 == 0, "ROM image has an odd number of bytes")
   end
   CPU:flash(data)
-  printf("Flashed %d words to ROM. Read %d debug symbols.\n", #CPU.rom, #CPU.symbols)
+  eprintf("Flashed %d words to ROM. Read %d debug symbols.\n", #CPU.rom, #CPU.symbols)
 end
 
 command 'source' '</path/to/source.asm>' 'Load source code for debugging' [[
@@ -149,7 +151,7 @@ function commands.source.fn(CPU, path)
   for _,sym in ipairs(CPU.symbols) do
     if sym.name then nlabels = nlabels + 1 end
   end
-  printf("Loaded %s as source code. Identified %d labels.\n", path, nlabels)
+  eprintf("Loaded %s as source code. Identified %d labels.\n", path, nlabels)
 end
 
 command 'reset' '' 'Reset the emulator' [[
