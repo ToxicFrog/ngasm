@@ -60,8 +60,8 @@
   D = D-A
   ~stored, &ARGS
   ; push return address and jump to function
-  ; +9 is the size of the pushconst macro (7) + the jmp macro (2)
-  ~pushconst, +9
+  ; +8 is the size of the pushconst macro (6) + the jmp macro (2)
+  ~pushconst, +8
   ~jmp, %0
   ; at this point the function has just called ~return, which has left the
   ; return value in &RETVAL, and dropped all locals, leaving the saved LOCALS

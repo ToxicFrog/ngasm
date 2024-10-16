@@ -17,11 +17,10 @@
 ; pushd ( -- A )
 ; pushes the value of D onto the stack.
 [pushd
-  @ &SP
-  A = 0|M
-  M = 0|D
-  @ &SP
-  M = M+1
+  @ &SP    ; A holds SP address
+  AM = M+1 ; increment stack pointer and get incremented ptr in A
+  A = A-1  ; point A back to the slot we want to fill
+  M = 0|D  ; store D
 ]
 
 ; pusha ( -- A )
