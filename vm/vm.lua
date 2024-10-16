@@ -25,6 +25,7 @@ function vm.new()
     -- debugging
     watches = {};
     symbols = {};
+    breakpoints = {};
   }
 
   setmetatable(new_vm, vm)
@@ -105,8 +106,8 @@ function vm:run(n)
   return self:trace(n, function() end)
 end
 
-function vm:trace(n, fn)
-  fn = fn or function(vm)
+function vm:trace(n, trace_fn)
+  trace_fn = trace_fn or function(vm)
     if not vmutil.decode(vm.IR).is_nop then print(vm) end
   end
   n = n or math.huge
@@ -115,9 +116,13 @@ function vm:trace(n, fn)
       -- no more program code!
       break
     end
+    if self.breakpoints[self.PC] then
+      io.stderr:write(string.format("\nBreakpoint hit: PC=$%04X\n%s\n", self.PC, self))
+      break
+    end
     self:step()
     self:check_watches()
-    fn(self)
+    trace_fn(self)
   end
   return self
 end
@@ -253,6 +258,13 @@ end
 
 function vm:add_watch(address)
   self.watches[address] = 0
+end
+
+-- Returns true if the breakpoint was set, false if unset.
+function vm:toggle_breakpoint(address)
+  local set = self.breakpoints[address]
+  self.breakpoints[address] = not set
+  return not set
 end
 
 function vm:check_watches()

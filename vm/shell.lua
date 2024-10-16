@@ -173,6 +173,28 @@ command 'trace' '' 'Run the program while printing CPU state' [[
 ]]
 commands.trace.fn = vm.trace
 
+command 'break' '[addr]' 'Set or remove a breakpoint' [[
+  Sets a breakpoint at the given address. When encountered by 'run' or 'trace',
+  it will drop back into the shell. 'break' with no arguments lists all
+  breakpoints. 'break' with an address that already has a breakpoint removes it.
+]]
+commands['break'].fn = function(CPU, address)
+  if address then
+    address = tonumber(address)
+    local set = CPU:toggle_breakpoint(address)
+    eprintf('%s breakpoint at address $%04X\n',
+      set and "Added" or "Removed", address)
+  else
+    for addr,enabled in pairs(CPU.breakpoints) do
+      if enabled then
+        local op = vmutil.decode(CPU.rom[addr])
+        printf('%04X - $%-32s %s\n',
+          addr, tostring(op), CPU:pc_to_source(addr))
+      end
+    end
+  end
+end
+
 command 'file' 'path address [mode]' 'Attach a file to the emulator' [[
   Attaches a file for byte-by-byte or word-by-word IO. It is mapped at the
   given address and the subsequent two addresses; see iostream.lua for
