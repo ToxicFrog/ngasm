@@ -657,8 +657,7 @@ M = 0|D
 
   :Exit
 ; Jump off the end of ROM
-@ $7FFF
-= 0|D <=>
+~jmp,$7FFF
 
 ; To support labels we need a number of new features:
 ; - understanding ":foo" as defining a label foo at the address at which it occurs

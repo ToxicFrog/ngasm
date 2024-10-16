@@ -39,8 +39,7 @@
 @ :Macro_Begin_Bind
 D = 0|A
 ~stored,&sym/next
-@ :Sym_Read
-= 0|D <=>
+~jmp,:Sym_Read
 
 ; Called when the name of the macro is done being read in. This should only
 ; happen on EOL, so we record the current offset as the macro's value, which
@@ -59,8 +58,7 @@ D = 0|A
 ; Now set the value to the current file offset.
 ~loadd,&core/fseek
 ~stored,&sym/value
-@ :Sym_Bind
-= 0|D <=>
+~jmp,:Sym_Bind
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Macro_End
@@ -94,8 +92,7 @@ M = 0|D ; seek
 D = 0|A
 @ &macros/sp
 M = M-D
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Macro_Expand
@@ -118,8 +115,7 @@ D = 0|A
 @ :Macro_Expand_ResolveDone
 D = 0|A
 ~stored,&sym/next
-@ :Sym_Resolve
-= 0|D <=>
+~jmp,:Sym_Resolve
 
 ; At this point sym_val holds the file offset of the macro definition.
 ; We need to set the in_macroexpansion flag and seek back to that point
@@ -139,8 +135,7 @@ D = 0|A
 @ :Macro_Expand_ArgDone
 D = 0|A
 ~stored,&val/next
-@ :Val_Read
-= 0|D <=>
+~jmp,:Val_Read
 
 ; We just finished reading in an argument, so store it in the next argv slot,
 ; increment argp, and either read another one or invoke the macro depending
@@ -158,8 +153,7 @@ M = M+1
 @ :Macro_Expand_ArgDone
 D = 0|A
 ~stored,&val/next
-@ :Val_Read
-= 0|D <=>
+~jmp,:Val_Read
 
 ; Called to actually invoke the macro once we've read in the macro address and
 ; all the arguments, if any.
@@ -186,5 +180,4 @@ M = 0|D
 ; should be replaced with the first line of the macro, not with a no-op
 ; but this means that the state is still set to Sym_Read
 ; so instead we want to jump to NewInstruction to reset the state pointer, etc.
-@ :NewInstruction
-= 0|D <=>
+~jmp,:NewInstruction
