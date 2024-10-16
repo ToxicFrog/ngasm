@@ -149,8 +149,8 @@ A = 0|M
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Called by the second-pass compiler (and once we have macros, the first-pass as
-; well) when resolving a symbol. It expects the symbol hash in *symbol and will
-; leave the value in *sym_value. If the symbol cannot be resolved it jumps to Error.
+; well) when resolving a symbol. It expects the symbol hash in sym/name and will
+; leave the value in sym/value. If the symbol cannot be resolved it jumps to Error.
 ;
 ; Like Sym_Bind it is not a state; you call it and it does its work immediately
 ; and then calls sym_next.
@@ -247,4 +247,5 @@ D = 0|A
 D = M-D
 @ &stdout.words
 M = 0|D
+  ~pushconst, 0  ; dummy return value
 ~return
