@@ -54,56 +54,29 @@ D = 0|A
 ~stored,&sym/next
 ; Now check the actual characters
 ~loadd,&core/char
-@ 072 ; ':'
-D = D-A
-@ :Sym_Read
-= 0|D =
+~jeq,\:,:Sym_Read
 ~loadd,&core/char
-@ 043 ; '#'
-D = D-A
-@ :Sym_Read
-= 0|D =
+~jeq,\#,:Sym_Read
 ~loadd,&core/char
-@ 046 ; '&'
-D = D-A
-@ :Sym_Read
-= 0|D =
+~jeq,\&,:Sym_Read
 ; Now check for a character constant.
 ~loadd,&core/char
-@ 0134 ; "\"
-D = D-A
-@ :Val_Read_Char
-= 0|D =
+~jeq,\\,:Val_Read_Char
 ; Relative jump address backwards?
 ~loadd,&core/char
-@ 055 ; '-'
-D = D-A
-@ :Val_Read_RelativeJump_Back
-= 0|D =
+~jeq,\-,:Val_Read_RelativeJump_Back
 ; Relative jump address forwards?
 ~loadd,&core/char
-@ 053 ; '+'
-D = D-A
-@ :Val_Read_RelativeJump_Forward
-= 0|D =
+~jeq,\+,:Val_Read_RelativeJump_Forward
 ; Hex constant starting with $?
 ~loadd,&core/char
-@ 044 ; '$'
-D = D-A
-@ :Val_Read_Hex
-= 0|D =
+~jeq,\$,:Val_Read_Hex
 ; Octal constant starting with 0?
 ~loadd,&core/char
-@ 060 ; '0'
-D = D-A
-@ :Val_Read_Oct
-= 0|D =
+~jeq,\0,:Val_Read_Oct
 ; Macroexpansion argument?
 ~loadd,&core/char
-@ 045 ; '%'
-D = D-A
-@ :Val_Read_MacroArg
-= 0|D =
+~jeq,\%,:Val_Read_MacroArg
 ; None of the above? Assume it's a decimal constant. Set that as the current
 ; state and then jump to it to process the first character.
 @ :Val_Read_Dec
@@ -327,10 +300,7 @@ M = 0+D
 = 0|D =
 ; If char is , this is an argument separator, same deal as EOL
 ~loadd,&core/char
-@ $2C ; ','
-D = D-A
-@ :Val_Read_Dec_EOL
-= 0|D =
+~jeq,$2C,:Val_Read_Dec_EOL  ; 2C is \,
 ; Start by making room in the value buffer
 ~loadd,&val/value
 ; Add D to M 9 times for a total of x10

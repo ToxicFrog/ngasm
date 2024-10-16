@@ -87,26 +87,17 @@ D = 0|A
 M = M+1
 ; If it's a newline, run the end-of-line routine.
 ~loadd,&core/char
-@ 012
-D = D - A
-@ :EndOfLine
-= 0|D =
+~jeq,$0A,:EndOfLine
 ; If we're in a comment, skip this character
 ~loadd,&core/in-comment
 @ :MainLoop
 = 0|D <>
 ; Also skip spaces
 ~loadd,&core/char
-@ 040
-D = D - A
-@ :MainLoop
-= 0|D =
+~jeq,$20,:MainLoop  ; $20 == space
 ; If it's a start-of-comment character, run CommentStart to set the in_comment flag
 ~loadd,&core/char
-@ 073
-D = D - A
-@ :CommentStart
-= 0|D =
+~jeq,$3B,:CommentStart  ; $3B == semicolon
 ; At this point, it's not a newline, it's not a space, it's not the start or
 ; interior of a comment, so it should hopefully be part of an instruction.
 ; Call the current state to deal with it. It will jump back to MainLoop when done.
@@ -223,48 +214,27 @@ M = M+1
 = 0|D =
 ; Is it an @? If so this is a load immediate A opcode.
 ~loadd,&core/char
-@ 0100 ; '@'
-D = D-A
-@ :LineStart_LoadImmediate
-= 0|D =
+~jeq,\@,:LineStart_LoadImmediate
 ; If it's a :, this is a label definition and we branch further depending on
 ; what pass we're on.
 ~loadd,&core/char
-@ 072 ; ':'
-D = D-A
-@ :LineStart_Label
-= 0|D =
+~jeq,\:,:LineStart_Label
 ; If it's a &, this is a constant definition - we need to read the label, then
 ; the value.
 ~loadd,&core/char
-@ 046 ; '&'
-D = D-A
-@ :LineStart_Constant
-= 0|D =
+~jeq,\&,:LineStart_Constant
 ; Same deal with # as with &.
 ~loadd,&core/char
-@ 043 ; '#'
-D = D-A
-@ :LineStart_Constant
-= 0|D =
+~jeq,\#,:LineStart_Constant
 ; If it's a [, this is the start of a macro definition.
 ~loadd,&core/char
-@ 0133 ; '['
-D = D-A
-@ :Macro_Begin
-= 0|D =
+~jeq,\[,:Macro_Begin
 ; If it's a ], this is the end of a macro definition.
 ~loadd,&core/char
-@ 0135 ; ']'
-D = D-A
-@ :Macro_End
-= 0|D =
+~jeq,\],:Macro_End
 ; If it's a ~, this is a macro invokation
 ~loadd,&core/char
-@ 0176 ; '~'
-D = D-A
-@ :Macro_Expand
-= 0|D =
+~jeq,\~,:Macro_Expand
 ; None of the above match.
 ; It's the start of a compute instruction. The first character is already going
 ; to be significant, so we need to set the current state to Destination and then
@@ -366,28 +336,16 @@ D = 0|A
   :Destination
 ; Check for =, which sends us to the next state (LHS)
 ~loadd,&core/char
-@ 075 ; '='
-D = D-A
-@ :Destination_Finished
-= 0|D =
+~jeq,\=,:Destination_Finished
 ; Check for A.
 ~loadd,&core/char
-@ 0101 ; 'A'
-D = D-A
-@ :Destination_A
-= 0|D =
+~jeq,\A,:Destination_A
 ; Check for D.
 ~loadd,&core/char
-@ 0104 ; 'D'
-D = D-A
-@ :Destination_D
-= 0|D =
+~jeq,\D,:Destination_D
 ; Check for M.
 ~loadd,&core/char
-@ 0115 ; 'M'
-D = D-A
-@ :Destination_M
-= 0|D =
+~jeq,\M,:Destination_M
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
 ~jmp,:Error
@@ -434,28 +392,16 @@ M = D | M
   :LHS
 ; Check for A.
 ~loadd,&core/char
-@ 0101 ; 'A'
-D = D-A
-@ :LHS_A
-= 0|D =
+~jeq,\A,:LHS_A
 ; Check for D.
 ~loadd,&core/char
-@ 0104 ; 'D'
-D = D-A
-@ :LHS_Done
-= 0|D =
+~jeq,\D,:LHS_Done
 ; Check for M.
 ~loadd,&core/char
-@ 0115 ; 'M'
-D = D-A
-@ :LHS_M
-= 0|D =
+~jeq,\M,:LHS_M
 ; Check for 0.
 ~loadd,&core/char
-@ 060 ; '0'
-D = D-A
-@ :LHS_Z
-= 0|D =
+~jeq,\0,:LHS_Z
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
 ~jmp,:Error
@@ -506,40 +452,22 @@ D = 0|A
   :Operator
 ; add
 ~loadd,&core/char
-@ 053 ; '+'
-D = D-A
-@ :Operator_Add
-= 0|D =
+~jeq,\+,:Operator_Add
 ; sub
 ~loadd,&core/char
-@ 055 ; '-'
-D = D-A
-@ :Operator_Sub
-= 0|D =
+~jeq,\-,:Operator_Sub
 ; and
 ~loadd,&core/char
-@ 046 ; &
-D = D-A
-@ :Operator_And
-= 0|D =
+~jeq,\&,:Operator_And
 ; or
 ~loadd,&core/char
-@ 0174 ; '|'
-D = D-A
-@ :Operator_Or
-= 0|D =
+~jeq,\|,:Operator_Or
 ; xor
 ~loadd,&core/char
-@ 0136 ; '^'
-D = D-A
-@ :Operator_Xor
-= 0|D =
+~jeq,\^,:Operator_Xor
 ; not
 ~loadd,&core/char
-@ 041 ; '!'
-D = D-A
-@ :Operator_Not
-= 0|D =
+~jeq,\!,:Operator_Not
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
 ~jmp,:Error
@@ -602,28 +530,16 @@ D = 0|A
   :RHS
 ; Check for A. This is the default case, so we set no bits.
 ~loadd,&core/char
-@ 0101 ; 'A'
-D = D-A
-@ :RHS_Done
-= 0|D =
+~jeq,\A,:RHS_Done
 ; Check for D.
 ~loadd,&core/char
-@ 0104 ; 'D'
-D = D-A
-@ :RHS_D
-= 0|D =
+~jeq,\D,:RHS_D
 ; Check for M.
 ~loadd,&core/char
-@ 0115 ; 'M'
-D = D-A
-@ :RHS_M
-= 0|D =
+~jeq,\M,:RHS_M
 ; Check for 1.
 ~loadd,&core/char
-@ 061 ; '1'
-D = D-A
-@ :RHS_One
-= 0|D =
+~jeq,\1,:RHS_One
 ; If char is \0 we're at end of line, no special cleanup needed so just continue
 ; EOL handling.
 ~loadd,&core/char
@@ -680,22 +596,13 @@ D = 0|A
   :Jump
 ; less than
 ~loadd,&core/char
-@ 074 ; '<'
-D = D-A
-@ :Jump_LT
-= 0|D =
+~jeq,\<,:Jump_LT
 ; equal
 ~loadd,&core/char
-@ 075 ; '='
-D = D-A
-@ :Jump_EQ
-= 0|D =
+~jeq,\=,:Jump_EQ
 ; greater than
 ~loadd,&core/char
-@ 076 ; '>'
-D = D-A
-@ :Jump_GT
-= 0|D =
+~jeq,\>,:Jump_GT
 ; If char is \0 we're at end of line, no special cleanup needed so just continue
 ; EOL handling.
 ~loadd,&core/char

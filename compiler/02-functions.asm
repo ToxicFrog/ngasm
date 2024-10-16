@@ -36,6 +36,15 @@
   M = 0|D
 ]
 
+; ~jeq,const,address
+; Jump if D is equal to the given const. Overwrites A and D.
+[jeq
+  @ %0
+  D = D-A
+  @ %1
+  = 0|D =
+]
+
 ; ~call,:function,nargs
 ; Calls the given function with the specified number of arguments on top of the
 ; stack. When it returns, the arguments have been popped and replaced with the
