@@ -36,9 +36,7 @@
 ; Called by LineStart when it sees the start of a macro definition.
   :Macro_Begin
 ; First, read in the name of the macro.
-@ :Macro_Begin_Bind
-D = 0|A
-~stored,&sym/next
+~storec,:Macro_Begin_Bind,&sym/next
 ~jmp,:Sym_Read
 
 ; Called when the name of the macro is done being read in. This should only
@@ -102,19 +100,13 @@ M = M-D
   :Macro_Expand
 ; Step one, resolve the macro. Pretend the first character is [ so that it matches
 ; the symbol seen at macro definition time.
-@ 0133 ; '['
-D = 0|A
-~stored,&core/char
-@ :Macro_Expand_Resolve
-D = 0|A
-~stored,&sym/next
+~storec,\[,&core/char
+~storec,:Macro_Expand_Resolve,&sym/next
 ~jmp,:Sym_Read
 
 ; Called after reading in the macro name.
   :Macro_Expand_Resolve
-@ :Macro_Expand_ResolveDone
-D = 0|A
-~stored,&sym/next
+~storec,:Macro_Expand_ResolveDone,&sym/next
 ~jmp,:Sym_Resolve
 
 ; At this point sym_val holds the file offset of the macro definition.
@@ -132,9 +124,7 @@ D = 0|A
   :Macro_Expand_WithArguments
 ~loadd,&macros/sp
 ~stored,&macros/argp ; set argp to point at the start of the current macro stack frame
-@ :Macro_Expand_ArgDone
-D = 0|A
-~stored,&val/next
+~storec,:Macro_Expand_ArgDone,&val/next
 ~jmp,:Val_Read
 
 ; We just finished reading in an argument, so store it in the next argv slot,
@@ -150,9 +140,7 @@ M = M+1
 ~loadd,&core/char ; char = \0? end of line, so call the macro
 ~jz,:Macro_Expand_Call
 ; otherwise look for another argument!
-@ :Macro_Expand_ArgDone
-D = 0|A
-~stored,&val/next
+~storec,:Macro_Expand_ArgDone,&val/next
 ~jmp,:Val_Read
 
 ; Called to actually invoke the macro once we've read in the macro address and
@@ -173,8 +161,7 @@ A = M-1
 M = 0|D ; store current fseek at top of macro stack
 ; seek to the address of the macro definition
 ~loadd,&macros/address
-@ &stdin.status
-M = 0|D
+~stored,&stdin.status
 ~stored,&core/fseek
 ; We jump back to mainloop here because the line containing the macroexpansion
 ; should be replaced with the first line of the macro, not with a no-op

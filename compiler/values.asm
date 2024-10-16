@@ -33,9 +33,7 @@
 @ &val/value
 M = 0&D
 ; Update state pointer
-@ :Val_Read_State
-D = 0|A
-~stored,&core/state
+~storec,:Val_Read_State,&core/state
 ; This is called when we know the next token is going to be a value, so we just
 ; return control to the mainloop. Val_Read_State will transfer control to
 ; subsidiary states as needed.
@@ -49,9 +47,7 @@ D = 0|A
   :Val_Read_State
 ; First, check for ':', '&', and '#'. These all immediately transfer control to
 ; Sym_Read, so we set up the continuation for those ahead of time.
-@ :Val_Read_SymDone
-D = 0|A
-~stored,&sym/next
+~storec,:Val_Read_SymDone,&sym/next
 ; Now check the actual characters
 ~loadd,&core/char
 ~jeq,\:,:Sym_Read
@@ -79,18 +75,14 @@ D = 0|A
 ~jeq,\%,:Val_Read_MacroArg
 ; None of the above? Assume it's a decimal constant. Set that as the current
 ; state and then jump to it to process the first character.
-@ :Val_Read_Dec
-D = 0|A
-~stored,&core/state
+~storec,:Val_Read_Dec,&core/state
 ~jmp,:Val_Read_Dec
 
 
 ; Called after reading in a symbol. We need to call Sym_Resolve to get the
 ; associated value.
   :Val_Read_SymDone
-@ :Val_Read_SymResolved
-D = 0|A
-~stored,&sym/next
+~storec,:Val_Read_SymResolved,&sym/next
 ~jmp,:Sym_Resolve
 
 ; Sym_Resolve is finished so copy the value it resolved into value and return
@@ -174,9 +166,7 @@ A = 0|M
 ; otherwise we're in macro definition and just emit a placeholder value
 ; this is a behaviour difference from stage 4, which emitted uninitialized
 ; memory instead
-@ 0
-D = 0|A
-~stored,&val/value
+~storec,0,&val/value
 ~jmp,:Val_Read_MacroArg_Done
   :Val_Read_MacroArg_Expansion
 ; read the argument off the macroexpansion stack and store it into value

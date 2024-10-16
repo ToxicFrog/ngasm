@@ -29,6 +29,14 @@
   M = 0|D
 ]
 
+; ~storec,value,address
+; Stores a constant value at the given address. Overwrites both registers.
+[storec
+  @ %0
+  D = 0|A
+  ~stored, %1
+]
+
 ; ~call,:function,nargs
 ; Calls the given function with the specified number of arguments on top of the
 ; stack. When it returns, the arguments have been popped and replaced with the

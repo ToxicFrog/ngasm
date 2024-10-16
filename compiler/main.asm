@@ -37,15 +37,11 @@
 ; write symbols to the right place.
   :Init
 ~stack/init,$4000
-@ :&symbols.
-D = 0|A
-~stored,&sym/last
+~storec,:&symbols.,&sym/last
 @ &core/line-num  ; initialize line number to 1
 M = 0+1
 ; initialize macroexpansion stack
-@ &macros/stack
-D = 0|A
-~stored,&macros/sp
+~storec,&macros/stack,&macros/sp
 ; Fall through to :NewInstruction
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -66,9 +62,7 @@ D = D+A
 @ &core/in-comment
 M = 0&D
 ; Set the current state to NewLine, the start-of-line state
-@ :LineStart
-D = 0|A
-~stored,&core/state
+~storec,:LineStart,&core/state
 ~jmp,:MainLoop
 
 ; Core loop.
@@ -236,9 +230,7 @@ M = M+1
 ; It's the start of a compute instruction. The first character is already going
 ; to be significant, so we need to set the current state to Destination and then
 ; jump to Destination rather than MainLoop, so we don't skip the current char.
-@ :Destination
-D = 0|A
-~stored,&core/state
+~storec,:Destination,&core/state
 ~jmp,:Destination
 
 ; Called when the line starts with @. Use Val_Read to read in the value, which
@@ -247,9 +239,7 @@ D = 0|A
 ; Value reading doesn't end until end of line, so we need to wrap up with
 ; EndOfLine_Continue once that's done.
   :LineStart_LoadImmediate
-@ :LoadImmediate_Done
-D = 0|A
-~stored,&val/next
+~storec,:LoadImmediate_Done,&val/next
 ~jmp,:Val_Read
 ~jmp,:MainLoop
 
@@ -272,9 +262,7 @@ D = 0|A
 ; Sym_Read will take over the state machine until it's done reading in the
 ; label, then call sym_next, which we will point at BindPC to associate the
 ; label with the current program counter.
-@ :BindPC
-D = 0|A
-~stored,&sym/next
+~storec,:BindPC,&sym/next
 ~jmp,:Sym_Read
 
 ; Called when we have successfully read in a label definition. This should in
@@ -286,9 +274,7 @@ D = 0|A
 ; - copy PC into sym_value and then call Sym_Bind.
   :BindPC
 ; set up sym_next
-@ :EndOfLine_Continue
-D = 0|A
-~stored,&sym/next
+~storec,:EndOfLine_Continue,&sym/next
 ; set up PC
 ~loadd,&core/pc
 ~stored,&sym/value
@@ -304,24 +290,18 @@ D = 0|A
 ; Note that you cannot alias symbols, e.g. `#foo = #bar` is illegal and your
 ; program will be frogs.
   :LineStart_Constant
-@ :LineStart_Constant_ReadVal
-D = 0|A
-~stored,&sym/next
+~storec,:LineStart_Constant_ReadVal,&sym/next
 ~jmp,:Sym_Read
 
   :LineStart_Constant_ReadVal
-@ :LineStart_Constant_Bind
-D = 0|A
-~stored,&val/next
+~storec,:LineStart_Constant_Bind,&val/next
 ~jmp,:Val_Read
 
 ; sym_value = value; sym_next = EndOfLine_Continue; jmp Sym_Bind
   :LineStart_Constant_Bind
 ~loadd,&val/value
 ~stored,&sym/value
-@ :EndOfLine_Continue
-D = 0|A
-~stored,&sym/next
+~storec,:EndOfLine_Continue,&sym/next
 ~jmp,:Sym_Bind
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -349,9 +329,7 @@ D = 0|A
 
 ; We read an =, so set up the state transition.
   :Destination_Finished
-@ :LHS
-D = 0|A
-~stored,&core/state
+~storec,:LHS,&core/state
 ~jmp,:MainLoop
 
 ; The next three short procedures all set up D with the correct bit to set in
@@ -428,9 +406,7 @@ D = D|A
 M = D | M
 ; fall through
   :LHS_Done
-@ :Operator
-D = 0|A
-~stored,&core/state
+~storec,:Operator,&core/state
 ~jmp,:MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -499,18 +475,14 @@ D = 0|A
 D = 0|A
 @ &core/opcode
 M = D | M
-@ :Jump
-D = 0|A
-~stored,&core/state
+~storec,:Jump,&core/state
 ~jmp,:MainLoop
 
 ; Write bits to opcode, set next state to RHS, return to main loop.
   :Operator_SetBits
 @ &core/opcode
 M = D | M
-@ :RHS
-D = 0|A
-~stored,&core/state
+~storec,:RHS,&core/state
 ~jmp,:MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -574,9 +546,7 @@ M = D | M
 
 ; Set next state to Jump and we're done here.
   :RHS_Done
-@ :Jump
-D = 0|A
-~stored,&core/state
+~storec,:Jump,&core/state
 ~jmp,:MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

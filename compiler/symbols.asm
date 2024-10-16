@@ -70,9 +70,7 @@
 @ &sym/name
 M = 0&D
 ; Update state pointer
-@ :Sym_Read_State
-D = 0|A
-~stored,&core/state
+~storec,:Sym_Read_State,&core/state
 ; fall through to Sym_Read_State
 
 ; This is the actual state. It receives each individual character.
@@ -171,9 +169,7 @@ A = 0|M
 ;   [code to do something with the resolved value]
   :Sym_Resolve
 ; Startup code - set this_sym = &symbols
-@ :&symbols.
-D = 0|A
-~stored,&sym/this
+~storec,:&symbols.,&sym/this
   :Sym_Resolve_Loop
 ; Are we at the end of the symbol table? If so, error out.
 ~loadd,&sym/last
@@ -227,9 +223,7 @@ A = 0|M
 ; Dumps the symbol table to stdout in a debugger-friendly format.
   :Sym_Dump
 ~function,0
-@ :&symbols.
-D = 0|A
-~stored,&sym/this
+~storec,:&symbols.,&sym/this
   :Sym_Dump_Iter
 ; this_sym == last_sym? break
 ~loadd,&sym/this
