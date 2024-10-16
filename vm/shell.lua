@@ -164,7 +164,14 @@ command 'run' '' 'Run the program to completion' [[
   Starts the emulator and runs the program in ROM until it exits (by jumping
   to a location past the end of ROM).
 ]]
-commands.run.fn = vm.run
+function commands.run.fn(CPU)
+  CPU:trace(nil, function(CPU)
+    if CPU.CLK % 1024 == 0 then
+      io.stderr:write('\r'..tostring(CPU)..'\x1B[K')
+    end
+  end)
+  io.stderr:write('\n')
+end
 
 command 'trace' '' 'Run the program while printing CPU state' [[
   As run, but after executing each instruction, prints out the contents of the
