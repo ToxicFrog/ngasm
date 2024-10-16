@@ -91,10 +91,16 @@
 
 ; dup ( x -- x x )
 ; duplicates the top value on the stack
+; like popd pushd pushd, but faster
 [dup
-  ~popd
-  ~pushd
-  ~pushd
+  @ &SP
+  A = M-1
+  D = 0|M ; get top of stack value into D
+  @ &SP
+  A = 0|M
+  M = 0|D ; write to top of stack
+  @ &SP
+  M = M+1
 ]
 
 ; drop ( x -- )
