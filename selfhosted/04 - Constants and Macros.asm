@@ -1475,7 +1475,7 @@ D = D-A
 ; Now check for a character constant.
 @ :&char.
 D = 0|M
-@ 047 ; "'"
+@ 0134 ; '\'
 D = D-A
 @ :Val_Read_Char.
 = 0|D =
@@ -1546,7 +1546,7 @@ A = 0|M
 = 0|D <=>
 
 ; The state for reading a character constant. Character constants have the
-; format 'x and scan as the character code for x, so (e.g.) 'a is 97.
+; format \x and scan as the character code for x, so (e.g.) \a is 97.
   :Val_Read_Char.
 ; Set ourself as the current state first
 @ :Val_Read_Char.

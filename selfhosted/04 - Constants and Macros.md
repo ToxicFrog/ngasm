@@ -67,8 +67,9 @@ Numeric literals can be written in four different formats:
   are treated as an unsigned base 8 number.
 - *Hexadecimal literals* consist of a `$` followed by a sequence of the digits
   0-9, a-f, and A-F and are treated as an unsigned base 16 number.
-- *Character literals* consist of a `'` followed by a single character and are
-  treated as the 7-bit ASCII value of that character.
+- *Character literals* consist of a `\` followed by a single character and are
+  treated as the 7-bit ASCII value of that character. Note that the `,`
+  character cannot be used this way (use `$2C` instead), nor whitespace.
 - *Relative addresses* are decimal literals prefaced with a `+` (for a jump
   forward) or a `-` (for a jump backwards); this will compile as the address of
   the instruction itself, plus or minus the given value. It is safe to use in
@@ -79,7 +80,7 @@ Thus, the following four instructions are equivalent:
 @ 072
 @ 58
 @ $3A
-@ ':
+@ \:
 ```
 
 ### Labels
@@ -114,7 +115,7 @@ an `=`, and then the value, e.g.
 ```
 &cat_ptr = 2
 #eol = $0A
-#at = '@
+#at = \@
 ```
 
 By convention, constants referring to memory addresses start with `&` while
