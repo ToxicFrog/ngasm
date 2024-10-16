@@ -25,4 +25,9 @@ diff: next/ngasm.stable.next.hex next/ngasm.next.next.hex
 	./nglist next/ngasm.next.next.hex next/ngasm.asm > next/ngasm.next.next.list 2>/dev/null
 	diff -u --color=always next/ngasm.stable.next.list next/ngasm.next.next.list | less -RF
 
-.PHONY: next clean
+# Build the stable.next version of the compiler, then load it into the debugger.
+debug: next/ngasm.stable.next.hex
+	@echo "Entering debugger."
+	ROM=next/ngasm.stable.next.hex SRC=next/ngasm.asm rlwrap ./ngasm next/ngasm.asm /dev/null info shell
+
+.PHONY: next clean debug
