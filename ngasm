@@ -8,25 +8,38 @@
 
 ROM=${ROM:=stable/ngasm.hex}
 SRC=${SRC:=stable/ngasm.asm}
-MODE=${MODE:=run}
 
+asm="$1"
+if [[ $2 == /dev/null ]]; then
+  bin="/dev/null"
+  hex="/dev/null"
+else
+  bin="$2.bin"
+  hex="$2.hex"
+fi
+shift 2
+
+if [[ ! $1 ]]; then
+  set -- run info
+fi
+
+set -e
+echo "$ROM --source $SRC --hex $hex -o $bin"
 vm/vm \
   "flash $ROM" \
   "source $SRC" \
-  "file $1 0x7FF0" \
-  "file /dev/stdout 0x7FF8 wb" \
-  "$MODE" \
-| xxd > "$2"
+  "file $asm 0x7FF0" \
+  "file $bin 0x7FF8 wb" \
+  "$@"
 
-if [[ ! -f $2 ]]; then
-  exit $?
-fi
+if [[ $bin == /dev/null ]]; then exit 0; fi
 
 # If the output was to a normal file, check its size to see if the build
 # succeeded.
-size=$(xxd -r "$2" | wc -c)
+xxd < $bin > $hex
+size=$(wc -c < $bin)
 if (( size % 2 == 1 )); then
   echo -n "Build failed: "
-  tail -n1 "$2"
+  tail -n2 "$hex"
   exit 1
 fi
