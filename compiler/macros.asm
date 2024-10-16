@@ -34,25 +34,25 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Called by LineStart when it sees the start of a macro definition.
-  :Macro_Begin.
+  :Macro_Begin
 ; First, read in the name of the macro.
-@ :Macro_Begin_Bind.
+@ :Macro_Begin_Bind
 D = 0|A
 @ &sym/next
 M = 0|D
-@ :Sym_Read.
+@ :Sym_Read
 = 0|D <=>
 
 ; Called when the name of the macro is done being read in. This should only
 ; happen on EOL, so we record the current offset as the macro's value, which
 ; means a seek back to this point will put us at the start of the first line
 ; in the macro body.
-  :Macro_Begin_Bind.
+  :Macro_Begin_Bind
 ; If we're on the second pass, do nothing here; the name of the macro is already
 ; in the symbol table and code generation will emit a no-op.
 @ &core/pass
 D = 0|M
-@ :EndOfLine_Continue.
+@ :EndOfLine_Continue
 = 0|D <>
 ; Otherwise we need to bind it. Set the continuation to EndOfLine_Continue,
 ; which is conveniently already in A.
@@ -64,7 +64,7 @@ M = 0|D
 D = 0|M
 @ &sym/value
 M = 0|D
-@ :Sym_Bind.
+@ :Sym_Bind
 = 0|D <=>
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -75,11 +75,11 @@ M = 0|D
 ; macro definition we have nothing to do here except ignore it; however, if we
 ; got here via a macroexpansion, we need to clean up after ourselves and seek
 ; the input file back to where we came from.
-  :Macro_End.
+  :Macro_End
 ; Not in macroexpansion? Return to mainloop.
 @ &macros/in-expansion
 D = 0|M
-@ :MainLoop.
+@ :MainLoop
 = 0|D =
 ; If we get this far we're in a macroexpansion. Decrement the macroexpansion
 ; flag and seek back to the point at which we were called.
@@ -102,7 +102,7 @@ M = 0|D ; seek
 D = 0|A
 @ &macros/sp
 M = M-D
-@ :MainLoop.
+@ :MainLoop
 = 0|D <=>
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -110,27 +110,27 @@ M = M-D
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Called by LineStart when it sees a macroexpansion.
-  :Macro_Expand.
+  :Macro_Expand
 ; Step one, resolve the macro. Pretend the first character is [ so that it matches
 ; the symbol seen at macro definition time.
 @ 0133 ; '['
 D = 0|A
 @ &core/char
 M = 0|D
-@ :Macro_Expand_Resolve.
+@ :Macro_Expand_Resolve
 D = 0|A
 @ &sym/next
 M = 0|D
-@ :Sym_Read.
+@ :Sym_Read
 = 0|D <=>
 
 ; Called after reading in the macro name.
-  :Macro_Expand_Resolve.
-@ :Macro_Expand_ResolveDone.
+  :Macro_Expand_Resolve
+@ :Macro_Expand_ResolveDone
 D = 0|A
 @ &sym/next
 M = 0|D
-@ :Sym_Resolve.
+@ :Sym_Resolve
 = 0|D <=>
 
 ; At this point sym_val holds the file offset of the macro definition.
@@ -139,32 +139,32 @@ M = 0|D
 ; into the output stream.
 ; TODO: macro argument support -- check if &char is \0 (eol) or , and if the
 ; latter, after resolving, do a Val_Read and set that as the macro argument.
-  :Macro_Expand_ResolveDone.
+  :Macro_Expand_ResolveDone
 @ &sym/value
 D = 0|M
 @ &macros/address
 M = 0|D ; copy the resolved value into macro_address
 @ &core/char
 D = 0|M
-@ :Macro_Expand_Call.
+@ :Macro_Expand_Call
 = 0|D = ; if char is \0, no arguments, call immediately
 ; there must be arguments, so start reading them with Val_Read
-  :Macro_Expand_WithArguments.
+  :Macro_Expand_WithArguments
 @ &macros/sp
 D = 0|M
 @ &macros/argp
 M = 0|D ; set argp to point at the start of the current macro stack frame
-@ :Macro_Expand_ArgDone.
+@ :Macro_Expand_ArgDone
 D = 0|A
 @ &val/next
 M = 0|D
-@ :Val_Read.
+@ :Val_Read
 = 0|D <=>
 
 ; We just finished reading in an argument, so store it in the next argv slot,
 ; increment argp, and either read another one or invoke the macro depending
 ; on whether we're at EOL or not.
-  :Macro_Expand_ArgDone.
+  :Macro_Expand_ArgDone
 @ &val/value
 D = 0|M
 @ &macros/argp
@@ -174,19 +174,19 @@ M = 0|D
 M = M+1
 @ &core/char ; char = \0? end of line, so call the macro
 D = 0|M
-@ :Macro_Expand_Call.
+@ :Macro_Expand_Call
 = 0|D =
 ; otherwise look for another argument!
-@ :Macro_Expand_ArgDone.
+@ :Macro_Expand_ArgDone
 D = 0|A
 @ &val/next
 M = 0|D
-@ :Val_Read.
+@ :Val_Read
 = 0|D <=>
 
 ; Called to actually invoke the macro once we've read in the macro address and
 ; all the arguments, if any.
-  :Macro_Expand_Call.
+  :Macro_Expand_Call
 @ &macros/in-expansion
 M = M+1
 ; Advance the macro stack pointer 11 words (10 arguments + return address)
@@ -212,5 +212,5 @@ M = 0|D
 ; should be replaced with the first line of the macro, not with a no-op
 ; but this means that the state is still set to Sym_Read
 ; so instead we want to jump to NewInstruction to reset the state pointer, etc.
-@ :NewInstruction.
+@ :NewInstruction
 = 0|D <=>

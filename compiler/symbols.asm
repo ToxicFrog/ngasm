@@ -65,12 +65,12 @@
 ;
 ; Callers are expected to call it directly; it will update the state pointer
 ; itself. This allows it to set up internal structures it needs correctly.
-  :Sym_Read.
+  :Sym_Read
 ; Clear the symbol hash
 @ &sym/name
 M = 0&D
 ; Update state pointer
-@ :Sym_Read_State.
+@ :Sym_Read_State
 D = 0|A
 @ &core/state
 M = 0|D
@@ -81,7 +81,7 @@ M = 0|D
 ; it should jump to sym_next.
 ; Note that it doesn't go straight to EndOfLine_Continue at end of line -- the
 ; *caller* is responsible for that!
-  :Sym_Read_State.
+  :Sym_Read_State
 ; check for end of line
 @ &core/char
 D = 0|M
@@ -115,7 +115,7 @@ D = D+M
 @ &sym/name
 M = 0|D
 ; return to main loop
-@ :MainLoop.
+@ :MainLoop
 = 0|D <=>
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -130,7 +130,7 @@ M = 0|D
 ;
 ; This is not a parser state; you call it and it does its work and then immediately
 ; calls *sym_next.
-  :Sym_Bind.
+  :Sym_Bind
 ; last_sym should already be pointing to the free slot at the end of the symbol
 ; table, so write the hash to it
 @ &sym/name
@@ -178,19 +178,19 @@ A = 0|M
 ;   JMP
 ;   :MyState_ResolveDone
 ;   [code to do something with the resolved value]
-  :Sym_Resolve.
+  :Sym_Resolve
 ; Startup code - set this_sym = &symbols
 @ :&symbols.
 D = 0|A
 @ &sym/this
 M = 0|D
-  :Sym_Resolve_Loop.
+  :Sym_Resolve_Loop
 ; Are we at the end of the symbol table? If so, error out.
 @ &sym/last
 D = 0|M
 @ &sym/this
 D = D-M
-@ :Sym_Resolve_Error.
+@ :Sym_Resolve_Error
 = 0|D =
 ; Check if the current symbol is the one we're looking for.
 @ &sym/this
@@ -198,19 +198,19 @@ A = 0|M ; fixed?
 D = 0|M
 @ &sym/name
 D = D-M
-@ :Sym_Resolve_Success.
+@ :Sym_Resolve_Success
 = 0|D =
 ; It wasn't :( Advance this_sym by two to point to the next entry, and loop.
 @ &sym/this
 M = M+1
 M = M+1
-@ :Sym_Resolve_Loop.
+@ :Sym_Resolve_Loop
 = 0|D <=>
 
 ; Called when we successfully find an entry in the symbol table. this_sym holds
 ; a pointer to the label cell of the entry, so we need to inc it to get the
 ; value cell.
-  :Sym_Resolve_Success.
+  :Sym_Resolve_Success
 @ &sym/this
 A = M+1
 D = 0|M
@@ -226,14 +226,14 @@ A = 0|M
 ; On pass 1 we may have just not seen the symbol definition yet, so instead we
 ; return whatever is currently in sym_value.
 ; On pass 2, we error out.
-  :Sym_Resolve_Error.
+  :Sym_Resolve_Error
 @ &core/pass
 D = 0|M
 @ &sym/next
 A = 0|M
 = 0|D =
 ; pass != 0, raise an error.
-@ :Error.
+@ :Error
 = 0|D <=>
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -242,19 +242,19 @@ A = 0|M
 
 ; Called at the end of the program, after successfully writing a ROM image.
 ; Dumps the symbol table to stdout in a debugger-friendly format.
-  :Sym_Dump.
+  :Sym_Dump
 ~function,0
 @ :&symbols.
 D = 0|A
 @ &sym/this
 M = 0|D
-  :Sym_Dump_Iter.
+  :Sym_Dump_Iter
 ; this_sym == last_sym? break
 @ &sym/this
 D = 0|M
 @ &sym/last
 D = D-M
-@ :Sym_Dump_Done.
+@ :Sym_Dump_Done
 = 0|D =
 ; else dump next table entry and increment this_sym
 @ &sym/this
@@ -264,9 +264,9 @@ D = 0|M
 M = 0|D
 @ &sym/this
 M = M+1
-@ :Sym_Dump_Iter.
+@ :Sym_Dump_Iter
 = 0|D <=>
-  :Sym_Dump_Done.
+  :Sym_Dump_Done
 ; write total symbol count and then exit program
 @ :&symbols.
 D = 0|A

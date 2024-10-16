@@ -7,5 +7,5 @@
 
 ; Unconditionally jump to the actual entrypoint.
 ; This lets us put whatever other code between here and Init that we want.
-@ :Init.
+@ :Init
 = 0+D <=>
