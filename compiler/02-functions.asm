@@ -15,6 +15,13 @@
 &LOCALS = 2
 &RETVAL = 3
 
+; ~jmp,address
+; Unconditional jump to the given address. Overwrites A.
+[jmp
+  @ %0
+  = 0|D <=>
+]
+
 ; ~call,:function,nargs
 ; Calls the given function with the specified number of arguments on top of the
 ; stack. When it returns, the arguments have been popped and replaced with the
@@ -34,8 +41,7 @@
   M = 0|D
   ; push return address and jump to function
   ~pushconst,+2
-  @ %0
-  = 0|D <=>
+  ~jmp,%0
   ; at this point the function has just called ~return, which has left the
   ; return value in &RETVAL and &SP pointing somewhere into the stack frame.
   ; First, drop the rest of the frame from the stack by jumping SP back to the

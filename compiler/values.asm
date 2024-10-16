@@ -40,8 +40,7 @@ M = 0|D
 ; This is called when we know the next token is going to be a value, so we just
 ; return control to the mainloop. Val_Read_State will transfer control to
 ; subsidiary states as needed.
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ; This is the master value-reading state. It will transfer control to a secondary
 ; state based on the first character sees; a :, &, or # means a symbol reference
@@ -122,8 +121,7 @@ D = D-A
 D = 0|A
 @ &core/state
 M = 0|D
-@ :Val_Read_Dec
-= 0|D <=>
+~jmp,:Val_Read_Dec
 
 
 ; Called after reading in a symbol. We need to call Sym_Resolve to get the
@@ -133,8 +131,7 @@ M = 0|D
 D = 0|A
 @ &sym/next
 M = 0|D
-@ :Sym_Resolve
-= 0|D <=>
+~jmp,:Sym_Resolve
 
 ; Sym_Resolve is finished so copy the value it resolved into value and return
 ; control to our caller.
@@ -174,8 +171,7 @@ A = 0|M
 D = 0|M
 @ &val/value
 M = 0+D
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ; These are for generating relative jump values. It is the same as decimal
 ; values except at the end, we must add or subtract it from the program counter.
@@ -191,8 +187,7 @@ M = 0-1
 D = 0|A
 @ &core/state
 M = 0+D
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
   :Val_Read_RelativeJump_Forward
 @ :&relative-jump-mode.
@@ -201,8 +196,7 @@ M = 0+1
 D = 0|A
 @ &core/state
 M = 0+D
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ; Called to read a macro argument. Read one decimal digit and return
 ; *(*macro_sp - 11 + digit).
@@ -211,8 +205,7 @@ M = 0+D
 D = 0|A
 @ &core/state
 M = 0+D
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
   :Val_Read_MacroArg_State
 ; if at end of line, call the continuation
@@ -233,8 +226,7 @@ D = 0|M
 D = 0|A
 @ &val/value
 M = 0|D
-@ :Val_Read_MacroArg_Done
-= 0|D <=>
+~jmp,:Val_Read_MacroArg_Done
   :Val_Read_MacroArg_Expansion
 ; read the argument off the macroexpansion stack and store it into value
 @ &core/char
@@ -251,8 +243,7 @@ D = 0|M ; dereference to read the value into D, then store it in value
 M = 0|D
   :Val_Read_MacroArg_Done
 ; and then return to the main loop
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ; Called by LoadImmediate on encountering the leading $ of a hex constant.
 ; Unlike DecimalConstant we don't want to ingest the first character of the
@@ -264,8 +255,7 @@ M = 0|D
 D = 0|A
 @ &core/state
 M = 0+D
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ; The state for reading a hex constant. This is equivalent to a decimal constant
 ; except that (a) we multiply by 16 instead of by 10 each digit and (b) we understand
@@ -319,8 +309,7 @@ D = 0|M
 D = D-A
 @ :Val_Read_HexUpper
 = 0|D >=
-@ :Val_Read_HexNumeric
-= 0|D <=>
+~jmp,:Val_Read_HexNumeric
 
   :. ; for some reason we need a dummy label here or the definition of the
   ; following label doesn't stick.
@@ -331,8 +320,7 @@ D = 0|M
 D = D-A
 @ &val/value
 M = D+M
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
   :Val_Read_HexUpper
 @ &core/char
@@ -341,8 +329,7 @@ D = 0|M
 D = D-A
 @ &val/value
 M = D+M
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
   :Val_Read_HexNumeric
 @ &core/char
@@ -351,8 +338,7 @@ D = 0|M
 D = D-A
 @ &val/value
 M = D+M
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ; The state for reading the number in a load immediate instruction.
 ; The number is decimal, so for each digit, we multiply the existing number by
@@ -401,8 +387,7 @@ D = 0|M
 D = D-A
 @ &val/value
 M = D+M
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
   :Val_Read_Dec_EOL
 @ :&relative-jump-mode.
@@ -412,24 +397,21 @@ M = 0&D ; clear the flag, we have the value saved in D
 = 0|D <
 @ :Val_Read_Dec_JumpForward
 = 0|D >
-@ :Val_Read_Dec_Done
-= 0|D <=>
+~jmp,:Val_Read_Dec_Done
 
   :Val_Read_Dec_JumpBack
 @ &core/pc
 D = 0|M
 @ &val/value
 M = D-M
-@ :Val_Read_Dec_Done
-= 0|D <=>
+~jmp,:Val_Read_Dec_Done
 
   :Val_Read_Dec_JumpForward
 @ &core/pc
 D = 0|M
 @ &val/value
 M = D+M
-@ :Val_Read_Dec_Done
-= 0|D <=>
+~jmp,:Val_Read_Dec_Done
 
   :Val_Read_Dec_Done
 ; call the continuation
@@ -482,5 +464,4 @@ D = 0|M
 D = D-A
 @ &val/value
 M = D+M
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop

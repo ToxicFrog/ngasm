@@ -115,8 +115,7 @@ D = D+M
 @ &sym/name
 M = 0|D
 ; return to main loop
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Sym_Bind                                                                   ;;
@@ -204,8 +203,7 @@ D = D-M
 @ &sym/this
 M = M+1
 M = M+1
-@ :Sym_Resolve_Loop
-= 0|D <=>
+~jmp,:Sym_Resolve_Loop
 
 ; Called when we successfully find an entry in the symbol table. this_sym holds
 ; a pointer to the label cell of the entry, so we need to inc it to get the
@@ -233,8 +231,7 @@ D = 0|M
 A = 0|M
 = 0|D =
 ; pass != 0, raise an error.
-@ :Error
-= 0|D <=>
+~jmp,:Error
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Sym_Dump                                                                   ;;
@@ -264,8 +261,7 @@ D = 0|M
 M = 0|D
 @ &sym/this
 M = M+1
-@ :Sym_Dump_Iter
-= 0|D <=>
+~jmp,:Sym_Dump_Iter
   :Sym_Dump_Done
 ; write total symbol count and then exit program
 @ :&symbols.

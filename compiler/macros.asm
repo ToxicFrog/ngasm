@@ -121,8 +121,7 @@ M = 0|D
 D = 0|A
 @ &sym/next
 M = 0|D
-@ :Sym_Read
-= 0|D <=>
+~jmp,:Sym_Read
 
 ; Called after reading in the macro name.
   :Macro_Expand_Resolve

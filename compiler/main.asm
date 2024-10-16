@@ -73,8 +73,7 @@ M = 0&D
 D = 0|A
 @ &core/state
 M = 0|D
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ; Core loop.
 ; This reads input byte by byte. Spaces and comments are discarded, newlines
@@ -133,8 +132,7 @@ A = 0|M
   :CommentStart
 @ &core/in-comment
 M = 0+1
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ; Called at end-of-file. At the end of the first pass this needs to rewind the
 ; file and start the second pass; at the end of the second pass it exits.
@@ -158,8 +156,7 @@ M = 0&D
 M = M+1
 @ &core/line-num
 M = 0+1
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -197,15 +194,13 @@ A = 0|M
 D = 0|M
 @ :EndOfLine_FirstPass
 = 0|D =
-@ :EndOfLine_SecondPass
-= 0|D <=>
+~jmp,:EndOfLine_SecondPass
 
   :EndOfLine_FirstPass
 ; First pass, so increment PC and output nothing.
 @ &core/pc
 M = M+1
-@ :NewInstruction
-= 0|D <=>
+~jmp,:NewInstruction
 
   :EndOfLine_SecondPass
 ; Second pass, so write the opcode to stdout. On lines containing no code,
@@ -218,8 +213,7 @@ M = 0|D
 ; Also increment PC, since relative jumps are calculated on the second pass.
 @ &core/pc
 M = M+1
-@ :NewInstruction
-= 0|D <=>
+~jmp,:NewInstruction
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; LineStart state                                                            ;;
@@ -302,8 +296,7 @@ D = D-A
 D = 0|A
 @ &core/state
 M = 0|D
-@ :Destination
-= 0|D <=>
+~jmp,:Destination
 
 ; Called when the line starts with @. Use Val_Read to read in the value, which
 ; is either going to be a constant or a symbol reference, and then continue into
@@ -315,18 +308,15 @@ M = 0|D
 D = 0|A
 @ &val/next
 M = 0|D
-@ :Val_Read
-= 0|D <=>
-@ :MainLoop
-= 0|D <=>
+~jmp,:Val_Read
+~jmp,:MainLoop
 
   :LoadImmediate_Done
 @ &val/value
 D = 0|M
 @ &core/opcode
 M = 0|D
-@ :EndOfLine_Continue
-= 0|D <=>
+~jmp,:EndOfLine_Continue
 
 ; Called when the line starts with :, denoting a label definition.
 ; If in the first pass, we transfer control to ReadLabel
@@ -347,8 +337,7 @@ D = 0|M
 D = 0|A
 @ &sym/next
 M = 0|D
-@ :Sym_Read
-= 0|D <=>
+~jmp,:Sym_Read
 
 ; Called when we have successfully read in a label definition. This should in
 ; practice be called at end of line via Sym_Read, so char=\0 and EndOfLine_Continue
@@ -368,8 +357,7 @@ M = 0|D
 D = 0|M
 @ &sym/value
 M = 0|D
-@ :Sym_Bind
-= 0|D <=>
+~jmp,:Sym_Bind
 
 ; Called when the line starts with & or #, denoting a constant definition.
 ; We need to call Sym_Read to read the symbol hash into &symbol, then Val_Read
@@ -385,16 +373,14 @@ M = 0|D
 D = 0|A
 @ &sym/next
 M = 0|D
-@ :Sym_Read
-= 0|D <=>
+~jmp,:Sym_Read
 
   :LineStart_Constant_ReadVal
 @ :LineStart_Constant_Bind
 D = 0|A
 @ &val/next
 M = 0|D
-@ :Val_Read
-= 0|D <=>
+~jmp,:Val_Read
 
 ; sym_value = value; sym_next = EndOfLine_Continue; jmp Sym_Bind
   :LineStart_Constant_Bind
@@ -406,8 +392,7 @@ M = 0|D
 D = 0|A
 @ &sym/next
 M = 0|D
-@ :Sym_Bind
-= 0|D <=>
+~jmp,:Sym_Bind
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Destination state                                                          ;;
@@ -446,8 +431,7 @@ D = D-A
 = 0|D =
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
-@ :Error
-= 0|D <=>
+~jmp,:Error
 
 ; We read an =, so set up the state transition.
   :Destination_Finished
@@ -455,8 +439,7 @@ D = D-A
 D = 0|A
 @ &core/state
 M = 0|D
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ; The next three short procedures all set up D with the correct bit to set in
 ; the instruction and then jump to Destination_SetBits, which does the actual
@@ -464,13 +447,11 @@ M = 0|D
   :Destination_A
 @ 040 ; 0x0020
 D = 0|A
-@ :Destination_SetBits
-= 0|D <=>
+~jmp,:Destination_SetBits
   :Destination_D
 @ 020 ; 0x0010
 D = 0|A
-@ :Destination_SetBits
-= 0|D <=>
+~jmp,:Destination_SetBits
   :Destination_M
 @ 010 ; 0x0008
 D = 0|A
@@ -479,8 +460,7 @@ D = 0|A
   :Destination_SetBits
 @ &core/opcode
 M = D | M
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; LHS operand state                                                          ;;
@@ -524,15 +504,13 @@ D = D-A
 = 0|D =
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
-@ :Error
-= 0|D <=>
+~jmp,:Error
 
 ; Operand is 0, set the zx bit.
   :LHS_Z
 @ 0200 ; 0x0080
 D = 0|A
-@ :LHS_SetBits
-= 0|D <=>
+~jmp,:LHS_SetBits
 
 ; Operand is M, set the mr bit and fall through the LHS_A to set the sw bit.
   :LHS_M
@@ -557,8 +535,7 @@ M = D | M
 D = 0|A
 @ &core/state
 M = 0|D
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Operator state                                                             ;;
@@ -618,8 +595,7 @@ D = D-A
 = 0|D =
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
-@ :Error
-= 0|D <=>
+~jmp,:Error
 
 ; Helpers for the various ALU operations. Same deal as LHS here, they
 ; set the bits needed in D and then jump to SetBits to actually move
@@ -627,27 +603,22 @@ D = D-A
   :Operator_Add
 @ 02000 ; 0x0400
 D = 0|A
-@ :Operator_SetBits
-= 0|D <=>
+~jmp,:Operator_SetBits
   :Operator_Sub
 @ 03000 ; 0x0600
 D = 0|A
-@ :Operator_SetBits
-= 0|D <=>
+~jmp,:Operator_SetBits
   :Operator_And
 D = 0&A
-@ :Operator_SetBits
-= 0|D <=>
+~jmp,:Operator_SetBits
   :Operator_Or
 @ 0400 ; 0x0100
 D = 0|A
-@ :Operator_SetBits
-= 0|D <=>
+~jmp,:Operator_SetBits
   :Operator_Xor
 @ 01000 ; 0x0200
 D = 0|A
-@ :Operator_SetBits
-= 0|D <=>
+~jmp,:Operator_SetBits
 
 ; This gets special handling because we need to skip the second operand
 ; entirely, since not is a unary operation.
@@ -660,8 +631,7 @@ M = D | M
 D = 0|A
 @ &core/state
 M = 0|D
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ; Write bits to opcode, set next state to RHS, return to main loop.
   :Operator_SetBits
@@ -671,8 +641,7 @@ M = D | M
 D = 0|A
 @ &core/state
 M = 0|D
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; RHS operand state                                                          ;;
@@ -722,8 +691,7 @@ D = 0|M
 = 0|D =
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
-@ :Error
-= 0|D <=>
+~jmp,:Error
 
 ; D operand means we need to set the swap bit (and the first operand should
 ; have been 0, A, or M, but we don't check that here. An appropriate check
@@ -731,15 +699,13 @@ D = 0|M
   :RHS_D
 @ 0100 ; 0x0040
 D = 0|A
-@ :RHS_SetBits
-= 0|D <=>
+~jmp,:RHS_SetBits
 
 ; Operand is M, set the mr bit.
   :RHS_M
 @ 010000 ; 0x1000
 D = 0|A
-@ :RHS_SetBits
-= 0|D <=>
+~jmp,:RHS_SetBits
 
 ; Operand is 1, set op0 to turn add into inc and sub into dec.
 ; If the operator was not add or sub your machine code will be frogs.
@@ -760,8 +726,7 @@ M = D | M
 D = 0|A
 @ &core/state
 M = 0|D
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Jump state                                                                 ;;
@@ -803,32 +768,27 @@ D = 0|M
 = 0|D =
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
-@ :Error
-= 0|D <=>
+~jmp,:Error
 
   :Jump_LT
 @ 04 ; 0x0004
 D = 0|A
-@ :Jump_SetBits
-= 0|D <=>
+~jmp,:Jump_SetBits
   :Jump_EQ
 @ 02 ; 0x0002
 D = 0|A
-@ :Jump_SetBits
-= 0|D <=>
+~jmp,:Jump_SetBits
   :Jump_GT
 @ 01 ; 0x0001
 D = 0|A
-@ :Jump_SetBits
-= 0|D <=>
+~jmp,:Jump_SetBits
 
 ; D contains some pile of bits. Set them in the opcode and remain in the same
 ; state.
   :Jump_SetBits
 @ &core/opcode
 M = D | M
-@ :MainLoop
-= 0|D <=>
+~jmp,:MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; End of program stuff                                                       ;;
@@ -842,8 +802,7 @@ M = D | M
   :Finalize
 ~call,:Sym_Dump,0
 ~drop
-@ :Exit
-= 0|D <=>
+~jmp,:Exit
 
 ; Error state. Write the input line number as a word, then the current pass
 ; as a byte.
