@@ -77,8 +77,7 @@ D = 0|A
   :MainLoop
 ; Read input status word, if end of file, start next pass or end program.
 ~loadd,&stdin.status
-@ :NextPass
-= 0|D =
+~jz,:NextPass
 ; Read next byte of input and stash it in char
 ~loadd,&stdin.bytes
 ~stored,&core/char
@@ -169,8 +168,7 @@ A = 0|M
   :EndOfLine_Continue
 ; If pass == 0, call _FirstPass, else _SecondPass.
 ~loadd,&core/pass
-@ :EndOfLine_FirstPass
-= 0|D =
+~jz,:EndOfLine_FirstPass
 ~jmp,:EndOfLine_SecondPass
 
   :EndOfLine_FirstPass
@@ -210,8 +208,7 @@ M = M+1
   :LineStart
 ; Check if we're at end of line, if so just do nothing
 ~loadd,&core/char
-@ :EndOfLine_Continue
-= 0|D =
+~jz,:EndOfLine_Continue
 ; Is it an @? If so this is a load immediate A opcode.
 ~loadd,&core/char
 ~jeq,\@,:LineStart_LoadImmediate
@@ -543,8 +540,7 @@ D = 0|A
 ; If char is \0 we're at end of line, no special cleanup needed so just continue
 ; EOL handling.
 ~loadd,&core/char
-@ :EndOfLine_Continue
-= 0|D =
+~jz,:EndOfLine_Continue
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
 ~jmp,:Error
@@ -606,8 +602,7 @@ D = 0|A
 ; If char is \0 we're at end of line, no special cleanup needed so just continue
 ; EOL handling.
 ~loadd,&core/char
-@ :EndOfLine_Continue
-= 0|D =
+~jz,:EndOfLine_Continue
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
 ~jmp,:Error

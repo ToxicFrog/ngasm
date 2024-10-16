@@ -45,6 +45,15 @@
   = 0|D =
 ]
 
+; ~jz,address
+; Jump if D is zero. Usually part of a sequence like:
+; ~loadd,&variable
+; ~jz,:Label
+[jz
+  @ %0
+  = 0|D =
+]
+
 ; ~call,:function,nargs
 ; Calls the given function with the specified number of arguments on top of the
 ; stack. When it returns, the arguments have been popped and replaced with the

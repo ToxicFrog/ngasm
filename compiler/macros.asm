@@ -73,8 +73,7 @@ D = 0|A
   :Macro_End
 ; Not in macroexpansion? Return to mainloop.
 ~loadd,&macros/in-expansion
-@ :MainLoop
-= 0|D =
+~jz,:MainLoop
 ; If we get this far we're in a macroexpansion. Decrement the macroexpansion
 ; flag and seek back to the point at which we were called.
 ; Note that this does not call EndOfLine_Continue -- as far as the main loop
@@ -132,8 +131,7 @@ D = 0|A
 ~loadd,&sym/value
 ~stored,&macros/address ; copy the resolved value into macro_address
 ~loadd,&core/char
-@ :Macro_Expand_Call
-= 0|D = ; if char is \0, no arguments, call immediately
+~jz,:Macro_Expand_Call ; if char is \0, no arguments, call immediately
 ; there must be arguments, so start reading them with Val_Read
   :Macro_Expand_WithArguments
 ~loadd,&macros/sp
@@ -155,8 +153,7 @@ M = 0|D
 @ &macros/argp
 M = M+1
 ~loadd,&core/char ; char = \0? end of line, so call the macro
-@ :Macro_Expand_Call
-= 0|D =
+~jz,:Macro_Expand_Call
 ; otherwise look for another argument!
 @ :Macro_Expand_ArgDone
 D = 0|A

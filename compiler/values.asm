@@ -296,8 +296,7 @@ M = 0+D
 ; jumps before we generate the opcode, and in either case we should then call
 ; the val_next continuation.
 ~loadd,&core/char
-@ :Val_Read_Dec_EOL
-= 0|D =
+~jz,:Val_Read_Dec_EOL
 ; If char is , this is an argument separator, same deal as EOL
 ~loadd,&core/char
 ~jeq,$2C,:Val_Read_Dec_EOL  ; 2C is \,

@@ -179,16 +179,14 @@ D = 0|A
 ~loadd,&sym/last
 @ &sym/this
 D = D-M
-@ :Sym_Resolve_Error
-= 0|D =
+~jz,:Sym_Resolve_Error
 ; Check if the current symbol is the one we're looking for.
 @ &sym/this
 A = 0|M ; fixed?
 D = 0|M
 @ &sym/name
 D = D-M
-@ :Sym_Resolve_Success
-= 0|D =
+~jz,:Sym_Resolve_Success
 ; It wasn't :( Advance this_sym by two to point to the next entry, and loop.
 @ &sym/this
 M = M+1
@@ -237,8 +235,7 @@ D = 0|A
 ~loadd,&sym/this
 @ &sym/last
 D = D-M
-@ :Sym_Dump_Done
-= 0|D =
+~jz,:Sym_Dump_Done
 ; else dump next table entry and increment this_sym
 @ &sym/this
 A = 0|M
