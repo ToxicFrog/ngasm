@@ -41,11 +41,18 @@
 ; Calls the given function with the specified number of arguments on top of the
 ; stack. When it returns, the arguments have been popped and replaced with the
 ; (single) return value of the function.
+; TODO: We're leaving a lot of optimization potential on the floor here -- in
+; particular, if the function takes no args or has no locals we can skip
+; saving/restoring those values, which is fairly expensive. Similarly, if the
+; function returns nothing we don't need to save RETVAL in return and restore
+; it in call. But those optimizations can wait until we have a more capable
+; language to work in.
+:__MACRO_CALL
 [call
   ; Save old values of ARGS and LOCALS
   ~pushvar, &ARGS
   ~pushvar, &LOCALS
-  ; set up new ARGS pointer
+  ; set up new ARGS pointer as SP - 2 - nargs
   ~loadd, &SP
   @ 2
   D = D-A
@@ -53,13 +60,21 @@
   D = D-A
   ~stored, &ARGS
   ; push return address and jump to function
-  ~pushconst, +2
+  ; +9 is the size of the pushconst macro (7) + the jmp macro (2)
+  ~pushconst, +9
   ~jmp, %0
   ; at this point the function has just called ~return, which has left the
-  ; return value in &RETVAL and &SP pointing somewhere into the stack frame.
-  ; First, drop the rest of the frame from the stack by jumping SP back to the
-  ; saved value of ARGS.
-  ~loadd, &ARGS
+  ; return value in &RETVAL, and dropped all locals, leaving the saved LOCALS
+  ; and ARGS from earlier on top of the stack.
+  ; First, we restore those to their pre-call values:
+  ~popvar, &LOCALS
+  ~popvar, &ARGS
+  ; Now we drop all the arguments from the stack; we could just set SP = ARGS,
+  ; except that we no longer have the old version of ARGS, so instead we have
+  ; to do math about it, knowing how many arguments we had:
+  ~loadd, &SP
+  @ %1
+  D = D-A
   ~stored, &SP
   ; now push the return value and we're done!
   ~pushvar, &RETVAL
@@ -68,6 +83,7 @@
 ; ~function,nlocals
 ; Use as the first thing after a function label. Afterwards, &LOCALS will point
 ; to the start of the function's local vector and &SP will point just after it.
+:__MACRO_FUNCTION
 [function
   ; locals points to current SP
   ~loadd, &SP
@@ -82,6 +98,7 @@
 ; ~return
 ; Returns from the function by saving the return value, dropping its locals, and
 ; then popping and jumping to the saved return address.
+:__MACRO_RETURN
 [return
   ~popvar, &RETVAL
   ~loadd, &LOCALS
@@ -92,6 +109,7 @@
 
 ; ~pusharg,n ( -- arg )
 ; pushes the nth argument (0-indexed) onto the stack.
+:__MACRO_PUSHARG
 [pusharg
   @ %0
   D = 0|A
@@ -102,6 +120,7 @@
 
 ; ~pushlocal,n ( -- local )
 ; pushes the nth local (0-indexed) onto the stack
+:__MACRO_PUSHLOCAL
 [pushlocal
   @ %0
   D = 0|A

@@ -61,7 +61,7 @@
 ; pops the value on top of the stack into A. Leaves D intact.
 [popa
   @ &SP
-  M = M-1
+  AM = M-1
   A = 0|M
 ]
 
@@ -69,7 +69,7 @@
 ; pops the value on top of the stack into D.
 [popd
   @ &SP
-  M = M-1
+  AM = M-1
   D = 0|M
 ]
 
