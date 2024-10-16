@@ -124,10 +124,3 @@ Compute-and-jump instructions have the following behaviour:
 
 ci - - * - u op1 op0 zx sw a d *a lt eq gt
 
-
-## Execution model
-
-In
-
-## Assembly language
-
