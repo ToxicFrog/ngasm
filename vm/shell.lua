@@ -51,21 +51,31 @@ local function run(CPU, line)
   end
 end
 
+local function run_shell(CPU)
+  -- interactive mode
+  printf('Emulator ready. Type "help" for a list of commands.\n> ')
+  for line in io.lines() do
+    run(CPU, line)
+    printf('\n> ')
+  end
+  print('Goodbye!')
+end
+
 function main(CPU, commands)
   if #commands > 0 then
     for _,command in ipairs(commands) do
       run(CPU, command)
     end
   else
-    -- interactive mode
-    printf('Emulator ready. Type "help" for a list of commands.\n> ')
-    for line in io.lines() do
-      run(CPU, line)
-      printf('\n> ')
-    end
-    print('Goodbye!')
+    run_shell(CPU)
   end
 end
+
+command 'shell' '' 'Enter the interactive shell' [[
+  Useless if already in the shell, but can be used from the command line to run
+  some startup commands and then drop into the shell.
+]]
+commands.shell.fn = run_shell
 
 command 'exit' '' 'Exit the emulator' [[
   Does what it says on the tin. You can also press ^D (or ^Z on windows) to exit.
@@ -219,7 +229,7 @@ command 'info' '' 'Display emulated CPU state' [[
   same output format used by 'trace'.
 ]]
 function commands.info.fn(CPU)
-  printf('%s\n', CPU)
+  eprintf('%s\n', CPU)
 end
 
 command 'step' '' 'Step the CPU one instruction' [[
