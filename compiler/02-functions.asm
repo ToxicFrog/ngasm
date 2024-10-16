@@ -43,26 +43,26 @@
 ; (single) return value of the function.
 [call
   ; Save old values of ARGS and LOCALS
-  ~pushvar,&ARGS
-  ~pushvar,&LOCALS
+  ~pushvar, &ARGS
+  ~pushvar, &LOCALS
   ; set up new ARGS pointer
-  ~loadd,&SP
+  ~loadd, &SP
   @ 2
   D = D-A
   @ %1
   D = D-A
-  ~stored,&ARGS
+  ~stored, &ARGS
   ; push return address and jump to function
-  ~pushconst,+2
-  ~jmp,%0
+  ~pushconst, +2
+  ~jmp, %0
   ; at this point the function has just called ~return, which has left the
   ; return value in &RETVAL and &SP pointing somewhere into the stack frame.
   ; First, drop the rest of the frame from the stack by jumping SP back to the
   ; saved value of ARGS.
-  ~loadd,&ARGS
-  ~stored,&SP
+  ~loadd, &ARGS
+  ~stored, &SP
   ; now push the return value and we're done!
-  ~pushvar,&RETVAL
+  ~pushvar, &RETVAL
 ]
 
 ; ~function,nlocals
@@ -70,8 +70,8 @@
 ; to the start of the function's local vector and &SP will point just after it.
 [function
   ; locals points to current SP
-  ~loadd,&SP
-  ~stored,&LOCALS
+  ~loadd, &SP
+  ~stored, &LOCALS
   ; advance SP by nlocals
   @ %0
   D = 0|A
@@ -83,9 +83,9 @@
 ; Returns from the function by saving the return value, dropping its locals, and
 ; then popping and jumping to the saved return address.
 [return
-  ~popvar,&RETVAL
-  ~loadd,&LOCALS
-  ~stored,&SP
+  ~popvar, &RETVAL
+  ~loadd, &LOCALS
+  ~stored, &SP
   ~popa
   = 0|D <=>
 ]

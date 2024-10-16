@@ -70,7 +70,7 @@
 @ &sym/name
 M = 0&D
 ; Update state pointer
-~storec,:Sym_Read_State,&core/state
+~storec, :Sym_Read_State, &core/state
 ; fall through to Sym_Read_State
 
 ; This is the actual state. It receives each individual character.
@@ -80,19 +80,19 @@ M = 0&D
 ; *caller* is responsible for that!
   :Sym_Read_State
 ; check for end of line
-~loadd,&core/char
+~loadd, &core/char
 @ &sym/next
 A = 0|M
 = 0|D =
 ; check for comma and equals
-~loadd,&core/char
+~loadd, &core/char
 @ 054 ; ','
 D = D-A
 @ &sym/next
 A = 0|M
 = 0|D =
 ; check for end of line
-~loadd,&core/char
+~loadd, &core/char
 @ 075 ; '='
 D = D-A
 @ &sym/next
@@ -100,14 +100,14 @@ A = 0|M
 = 0|D =
 ; Not at end, so add the just-read character to the label hash.
 ; First, double the existing hash to shift left 1 bit.
-~loadd,&sym/name
+~loadd, &sym/name
 D = D+M
 ; Then add the new character to it.
 @ &core/char
 D = D+M
-~stored,&sym/name
+~stored, &sym/name
 ; return to main loop
-~jmp,:MainLoop
+~jmp, :MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Sym_Bind                                                                   ;;
@@ -124,7 +124,7 @@ D = D+M
   :Sym_Bind
 ; last_sym should already be pointing to the free slot at the end of the symbol
 ; table, so write the hash to it
-~loadd,&sym/name ; D = symbol
+~loadd, &sym/name ; D = symbol
 @ &sym/last
 A = 0|M
 M = 0|D ; *last_sym = D
@@ -132,7 +132,7 @@ M = 0|D ; *last_sym = D
 @ &sym/last
 M = M+1
 ; write the value we were given to that slot
-~loadd,&sym/value
+~loadd, &sym/value
 @ &sym/last
 A = 0|M
 M = 0|D
@@ -169,25 +169,25 @@ A = 0|M
 ;   [code to do something with the resolved value]
   :Sym_Resolve
 ; Startup code - set this_sym = &symbols
-~storec,:&symbols.,&sym/this
+~storec, :&symbols., &sym/this
   :Sym_Resolve_Loop
 ; Are we at the end of the symbol table? If so, error out.
-~loadd,&sym/last
+~loadd, &sym/last
 @ &sym/this
 D = D-M
-~jz,:Sym_Resolve_Error
+~jz, :Sym_Resolve_Error
 ; Check if the current symbol is the one we're looking for.
 @ &sym/this
 A = 0|M ; fixed?
 D = 0|M
 @ &sym/name
 D = D-M
-~jz,:Sym_Resolve_Success
+~jz, :Sym_Resolve_Success
 ; It wasn't :( Advance this_sym by two to point to the next entry, and loop.
 @ &sym/this
 M = M+1
 M = M+1
-~jmp,:Sym_Resolve_Loop
+~jmp, :Sym_Resolve_Loop
 
 ; Called when we successfully find an entry in the symbol table. this_sym holds
 ; a pointer to the label cell of the entry, so we need to inc it to get the
@@ -197,7 +197,7 @@ M = M+1
 A = M+1
 D = 0|M
 ; now write the value into &sym_value so the caller can fetch it
-~stored,&sym/value
+~stored, &sym/value
 ; return control to the caller
 @ &sym/next
 A = 0|M
@@ -208,12 +208,12 @@ A = 0|M
 ; return whatever is currently in sym_value.
 ; On pass 2, we error out.
   :Sym_Resolve_Error
-~loadd,&core/pass
+~loadd, &core/pass
 @ &sym/next
 A = 0|M
 = 0|D =
 ; pass != 0, raise an error.
-~jmp,:Error
+~jmp, :Error
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Sym_Dump                                                                   ;;
@@ -222,14 +222,14 @@ A = 0|M
 ; Called at the end of the program, after successfully writing a ROM image.
 ; Dumps the symbol table to stdout in a debugger-friendly format.
   :Sym_Dump
-~function,0
-~storec,:&symbols.,&sym/this
+~function, 0
+~storec, :&symbols., &sym/this
   :Sym_Dump_Iter
 ; this_sym == last_sym? break
-~loadd,&sym/this
+~loadd, &sym/this
 @ &sym/last
 D = D-M
-~jz,:Sym_Dump_Done
+~jz, :Sym_Dump_Done
 ; else dump next table entry and increment this_sym
 @ &sym/this
 A = 0|M
@@ -238,7 +238,7 @@ D = 0|M
 M = 0|D
 @ &sym/this
 M = M+1
-~jmp,:Sym_Dump_Iter
+~jmp, :Sym_Dump_Iter
   :Sym_Dump_Done
 ; write total symbol count and then exit program
 @ :&symbols.

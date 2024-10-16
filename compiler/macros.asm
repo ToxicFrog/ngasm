@@ -36,8 +36,8 @@
 ; Called by LineStart when it sees the start of a macro definition.
   :Macro_Begin
 ; First, read in the name of the macro.
-~storec,:Macro_Begin_Bind,&sym/next
-~jmp,:Sym_Read
+~storec, :Macro_Begin_Bind, &sym/next
+~jmp, :Sym_Read
 
 ; Called when the name of the macro is done being read in. This should only
 ; happen on EOL, so we record the current offset as the macro's value, which
@@ -46,17 +46,17 @@
   :Macro_Begin_Bind
 ; If we're on the second pass, do nothing here; the name of the macro is already
 ; in the symbol table and code generation will emit a no-op.
-~loadd,&core/pass
+~loadd, &core/pass
 @ :EndOfLine_Continue
 = 0|D <>
 ; Otherwise we need to bind it. Set the continuation to EndOfLine_Continue,
 ; which is conveniently already in A.
 D = 0|A
-~stored,&sym/next
+~stored, &sym/next
 ; Now set the value to the current file offset.
-~loadd,&core/fseek
-~stored,&sym/value
-~jmp,:Sym_Bind
+~loadd, &core/fseek
+~stored, &sym/value
+~jmp, :Sym_Bind
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Macro_End
@@ -68,8 +68,8 @@ D = 0|A
 ; the input file back to where we came from.
   :Macro_End
 ; Not in macroexpansion? Return to mainloop.
-~loadd,&macros/in-expansion
-~jz,:MainLoop
+~loadd, &macros/in-expansion
+~jz, :MainLoop
 ; If we get this far we're in a macroexpansion. Decrement the macroexpansion
 ; flag and seek back to the point at which we were called.
 ; Note that this does not call EndOfLine_Continue -- as far as the main loop
@@ -82,7 +82,7 @@ M = M-1
 M = M-1
 A = 0|M
 D = 0|M
-~stored,&core/fseek
+~stored, &core/fseek
 @ &stdin.status
 M = 0|D ; seek
 ; drop this whole stack frame
@@ -90,7 +90,7 @@ M = 0|D ; seek
 D = 0|A
 @ &macros/sp
 M = M-D
-~jmp,:MainLoop
+~jmp, :MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Macro_Expand
@@ -100,14 +100,14 @@ M = M-D
   :Macro_Expand
 ; Step one, resolve the macro. Pretend the first character is [ so that it matches
 ; the symbol seen at macro definition time.
-~storec,\[,&core/char
-~storec,:Macro_Expand_Resolve,&sym/next
-~jmp,:Sym_Read
+~storec, \[, &core/char
+~storec, :Macro_Expand_Resolve, &sym/next
+~jmp, :Sym_Read
 
 ; Called after reading in the macro name.
   :Macro_Expand_Resolve
-~storec,:Macro_Expand_ResolveDone,&sym/next
-~jmp,:Sym_Resolve
+~storec, :Macro_Expand_ResolveDone, &sym/next
+~jmp, :Sym_Resolve
 
 ; At this point sym_val holds the file offset of the macro definition.
 ; We need to set the in_macroexpansion flag and seek back to that point
@@ -116,32 +116,32 @@ M = M-D
 ; TODO: macro argument support -- check if &char is \0 (eol) or , and if the
 ; latter, after resolving, do a Val_Read and set that as the macro argument.
   :Macro_Expand_ResolveDone
-~loadd,&sym/value
-~stored,&macros/address ; copy the resolved value into macro_address
-~loadd,&core/char
-~jz,:Macro_Expand_Call ; if char is \0, no arguments, call immediately
+~loadd, &sym/value
+~stored, &macros/address ; copy the resolved value into macro_address
+~loadd, &core/char
+~jz, :Macro_Expand_Call ; if char is \0, no arguments, call immediately
 ; there must be arguments, so start reading them with Val_Read
   :Macro_Expand_WithArguments
-~loadd,&macros/sp
-~stored,&macros/argp ; set argp to point at the start of the current macro stack frame
-~storec,:Macro_Expand_ArgDone,&val/next
-~jmp,:Val_Read
+~loadd, &macros/sp
+~stored, &macros/argp ; set argp to point at the start of the current macro stack frame
+~storec, :Macro_Expand_ArgDone, &val/next
+~jmp, :Val_Read
 
 ; We just finished reading in an argument, so store it in the next argv slot,
 ; increment argp, and either read another one or invoke the macro depending
 ; on whether we're at EOL or not.
   :Macro_Expand_ArgDone
-~loadd,&val/value
+~loadd, &val/value
 @ &macros/argp
 A = 0|M
 M = 0|D
 @ &macros/argp
 M = M+1
-~loadd,&core/char ; char = \0? end of line, so call the macro
-~jz,:Macro_Expand_Call
+~loadd, &core/char ; char = \0? end of line, so call the macro
+~jz, :Macro_Expand_Call
 ; otherwise look for another argument!
-~storec,:Macro_Expand_ArgDone,&val/next
-~jmp,:Val_Read
+~storec, :Macro_Expand_ArgDone, &val/next
+~jmp, :Val_Read
 
 ; Called to actually invoke the macro once we've read in the macro address and
 ; all the arguments, if any.
@@ -155,16 +155,16 @@ D = 0|A
 M = M+D
 ; push the current fseek onto the macro stack. The pointer points at the first
 ; empty slot, so we need to subtract 1 from it to get the right address.
-~loadd,&core/fseek
+~loadd, &core/fseek
 @ &macros/sp
 A = M-1
 M = 0|D ; store current fseek at top of macro stack
 ; seek to the address of the macro definition
-~loadd,&macros/address
-~stored,&stdin.status
-~stored,&core/fseek
+~loadd, &macros/address
+~stored, &stdin.status
+~stored, &core/fseek
 ; We jump back to mainloop here because the line containing the macroexpansion
 ; should be replaced with the first line of the macro, not with a no-op
 ; but this means that the state is still set to Sym_Read
 ; so instead we want to jump to NewInstruction to reset the state pointer, etc.
-~jmp,:NewInstruction
+~jmp, :NewInstruction

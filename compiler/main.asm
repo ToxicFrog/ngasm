@@ -36,12 +36,12 @@
 ; It sets last_sym to point to the start of the symbol table so that we
 ; write symbols to the right place.
   :Init
-~stack/init,$4000
-~storec,:&symbols.,&sym/last
+~stack/init, $4000
+~storec, :&symbols., &sym/last
 @ &core/line-num  ; initialize line number to 1
 M = 0+1
 ; initialize macroexpansion stack
-~storec,&macros/stack,&macros/sp
+~storec, &macros/stack, &macros/sp
 ; Fall through to :NewInstruction
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -57,40 +57,40 @@ M = 0+1
 @ 040000 ;16384
 D = 0+A
 D = D+A
-~stored,&core/opcode
+~stored, &core/opcode
 ; Clear the in_comment flag
 @ &core/in-comment
 M = 0&D
 ; Set the current state to NewLine, the start-of-line state
-~storec,:LineStart,&core/state
-~jmp,:MainLoop
+~storec, :LineStart, &core/state
+~jmp, :MainLoop
 
 ; Core loop.
 ; This reads input byte by byte. Spaces and comments are discarded, newlines
 ; trigger opcode emission, everything else is passed to the current state.
   :MainLoop
 ; Read input status word, if end of file, start next pass or end program.
-~loadd,&stdin.status
-~jz,:NextPass
+~loadd, &stdin.status
+~jz, :NextPass
 ; Read next byte of input and stash it in char
-~loadd,&stdin.bytes
-~stored,&core/char
+~loadd, &stdin.bytes
+~stored, &core/char
 ; Increment the fseek counter
 @ &core/fseek
 M = M+1
 ; If it's a newline, run the end-of-line routine.
-~loadd,&core/char
-~jeq,$0A,:EndOfLine
+~loadd, &core/char
+~jeq, $0A, :EndOfLine
 ; If we're in a comment, skip this character
-~loadd,&core/in-comment
+~loadd, &core/in-comment
 @ :MainLoop
 = 0|D <>
 ; Also skip spaces
-~loadd,&core/char
-~jeq,$20,:MainLoop  ; $20 == space
+~loadd, &core/char
+~jeq, $20, :MainLoop  ; $20 == space
 ; If it's a start-of-comment character, run CommentStart to set the in_comment flag
-~loadd,&core/char
-~jeq,$3B,:CommentStart  ; $3B == semicolon
+~loadd, &core/char
+~jeq, $3B, :CommentStart  ; $3B == semicolon
 ; At this point, it's not a newline, it's not a space, it's not the start or
 ; interior of a comment, so it should hopefully be part of an instruction.
 ; Call the current state to deal with it. It will jump back to MainLoop when done.
@@ -105,13 +105,13 @@ A = 0|M
   :CommentStart
 @ &core/in-comment
 M = 0+1
-~jmp,:MainLoop
+~jmp, :MainLoop
 
 ; Called at end-of-file. At the end of the first pass this needs to rewind the
 ; file and start the second pass; at the end of the second pass it exits.
   :NextPass
 ; If pass>0, exit the program.
-~loadd,&core/pass
+~loadd, &core/pass
 @ :Finalize
 = 0|D >
 ; Otherwise, rewind stdin to start of file by writing a 0 to it
@@ -128,7 +128,7 @@ M = 0&D
 M = M+1
 @ &core/line-num
 M = 0+1
-~jmp,:MainLoop
+~jmp, :MainLoop
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -141,7 +141,7 @@ M = 0+1
 ; should do whatever cleanup they need to do and then call EndOfLine_Continue.
   :EndOfLine
 ; If we're in a macro, don't increment line number
-~loadd,&macros/in-expansion
+~loadd, &macros/in-expansion
 @ :EndOfLine_NoLineNum
 = 0|D <>
 @ &core/line-num
@@ -161,27 +161,27 @@ A = 0|M
 ; opcode buffer, etc.
   :EndOfLine_Continue
 ; If pass == 0, call _FirstPass, else _SecondPass.
-~loadd,&core/pass
-~jz,:EndOfLine_FirstPass
-~jmp,:EndOfLine_SecondPass
+~loadd, &core/pass
+~jz, :EndOfLine_FirstPass
+~jmp, :EndOfLine_SecondPass
 
   :EndOfLine_FirstPass
 ; First pass, so increment PC and output nothing.
 @ &core/pc
 M = M+1
-~jmp,:NewInstruction
+~jmp, :NewInstruction
 
   :EndOfLine_SecondPass
 ; Second pass, so write the opcode to stdout. On lines containing no code,
 ; NewInstruction will have set this up as a no-op, so it's safe to emit
 ; regardless.
-~loadd,&core/opcode
+~loadd, &core/opcode
 @ &stdout.words
 M = 0|D
 ; Also increment PC, since relative jumps are calculated on the second pass.
 @ &core/pc
 M = M+1
-~jmp,:NewInstruction
+~jmp, :NewInstruction
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; LineStart state                                                            ;;
@@ -201,37 +201,37 @@ M = M+1
 ; load immediate instruction, so those are handled in LoadImmediate.)
   :LineStart
 ; Check if we're at end of line, if so just do nothing
-~loadd,&core/char
-~jz,:EndOfLine_Continue
+~loadd, &core/char
+~jz, :EndOfLine_Continue
 ; Is it an @? If so this is a load immediate A opcode.
-~loadd,&core/char
-~jeq,\@,:LineStart_LoadImmediate
+~loadd, &core/char
+~jeq, \@, :LineStart_LoadImmediate
 ; If it's a :, this is a label definition and we branch further depending on
 ; what pass we're on.
-~loadd,&core/char
-~jeq,\:,:LineStart_Label
+~loadd, &core/char
+~jeq, \:, :LineStart_Label
 ; If it's a &, this is a constant definition - we need to read the label, then
 ; the value.
-~loadd,&core/char
-~jeq,\&,:LineStart_Constant
+~loadd, &core/char
+~jeq, \&, :LineStart_Constant
 ; Same deal with # as with &.
-~loadd,&core/char
-~jeq,\#,:LineStart_Constant
+~loadd, &core/char
+~jeq, \#, :LineStart_Constant
 ; If it's a [, this is the start of a macro definition.
-~loadd,&core/char
-~jeq,\[,:Macro_Begin
+~loadd, &core/char
+~jeq, \[, :Macro_Begin
 ; If it's a ], this is the end of a macro definition.
-~loadd,&core/char
-~jeq,\],:Macro_End
+~loadd, &core/char
+~jeq, \], :Macro_End
 ; If it's a ~, this is a macro invokation
-~loadd,&core/char
-~jeq,\~,:Macro_Expand
+~loadd, &core/char
+~jeq, \~, :Macro_Expand
 ; None of the above match.
 ; It's the start of a compute instruction. The first character is already going
 ; to be significant, so we need to set the current state to Destination and then
 ; jump to Destination rather than MainLoop, so we don't skip the current char.
-~storec,:Destination,&core/state
-~jmp,:Destination
+~storec, :Destination, &core/state
+~jmp, :Destination
 
 ; Called when the line starts with @. Use Val_Read to read in the value, which
 ; is either going to be a constant or a symbol reference, and then continue into
@@ -239,20 +239,20 @@ M = M+1
 ; Value reading doesn't end until end of line, so we need to wrap up with
 ; EndOfLine_Continue once that's done.
   :LineStart_LoadImmediate
-~storec,:LoadImmediate_Done,&val/next
-~jmp,:Val_Read
-~jmp,:MainLoop
+~storec, :LoadImmediate_Done, &val/next
+~jmp, :Val_Read
+~jmp, :MainLoop
 
   :LoadImmediate_Done
-~loadd,&val/value
-~stored,&core/opcode
-~jmp,:EndOfLine_Continue
+~loadd, &val/value
+~stored, &core/opcode
+~jmp, :EndOfLine_Continue
 
 ; Called when the line starts with :, denoting a label definition.
 ; If in the first pass, we transfer control to ReadLabel
 ; else treat it like a comment.
   :LineStart_Label
-~loadd,&core/pass
+~loadd, &core/pass
 ; On pass 1, call CommentStart, the same routine used by the main loop when it
 ; sees a ';' character. This will flag this character, and the rest of the line,
 ; as a comment.
@@ -262,8 +262,8 @@ M = M+1
 ; Sym_Read will take over the state machine until it's done reading in the
 ; label, then call sym_next, which we will point at BindPC to associate the
 ; label with the current program counter.
-~storec,:BindPC,&sym/next
-~jmp,:Sym_Read
+~storec, :BindPC, &sym/next
+~jmp, :Sym_Read
 
 ; Called when we have successfully read in a label definition. This should in
 ; practice be called at end of line via Sym_Read, so char=\0 and EndOfLine_Continue
@@ -274,11 +274,11 @@ M = M+1
 ; - copy PC into sym_value and then call Sym_Bind.
   :BindPC
 ; set up sym_next
-~storec,:EndOfLine_Continue,&sym/next
+~storec, :EndOfLine_Continue, &sym/next
 ; set up PC
-~loadd,&core/pc
-~stored,&sym/value
-~jmp,:Sym_Bind
+~loadd, &core/pc
+~stored, &sym/value
+~jmp, :Sym_Bind
 
 ; Called when the line starts with & or #, denoting a constant definition.
 ; We need to call Sym_Read to read the symbol hash into &symbol, then Val_Read
@@ -290,19 +290,19 @@ M = M+1
 ; Note that you cannot alias symbols, e.g. `#foo = #bar` is illegal and your
 ; program will be frogs.
   :LineStart_Constant
-~storec,:LineStart_Constant_ReadVal,&sym/next
-~jmp,:Sym_Read
+~storec, :LineStart_Constant_ReadVal, &sym/next
+~jmp, :Sym_Read
 
   :LineStart_Constant_ReadVal
-~storec,:LineStart_Constant_Bind,&val/next
-~jmp,:Val_Read
+~storec, :LineStart_Constant_Bind, &val/next
+~jmp, :Val_Read
 
 ; sym_value = value; sym_next = EndOfLine_Continue; jmp Sym_Bind
   :LineStart_Constant_Bind
-~loadd,&val/value
-~stored,&sym/value
-~storec,:EndOfLine_Continue,&sym/next
-~jmp,:Sym_Bind
+~loadd, &val/value
+~stored, &sym/value
+~storec, :EndOfLine_Continue, &sym/next
+~jmp, :Sym_Bind
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Destination state                                                          ;;
@@ -312,25 +312,25 @@ M = M+1
 ; designating the destination(s) for the computed values.
   :Destination
 ; Check for =, which sends us to the next state (LHS)
-~loadd,&core/char
-~jeq,\=,:Destination_Finished
+~loadd, &core/char
+~jeq, \=, :Destination_Finished
 ; Check for A.
-~loadd,&core/char
-~jeq,\A,:Destination_A
+~loadd, &core/char
+~jeq, \A, :Destination_A
 ; Check for D.
-~loadd,&core/char
-~jeq,\D,:Destination_D
+~loadd, &core/char
+~jeq, \D, :Destination_D
 ; Check for M.
-~loadd,&core/char
-~jeq,\M,:Destination_M
+~loadd, &core/char
+~jeq, \M, :Destination_M
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
-~jmp,:Error
+~jmp, :Error
 
 ; We read an =, so set up the state transition.
   :Destination_Finished
-~storec,:LHS,&core/state
-~jmp,:MainLoop
+~storec, :LHS, &core/state
+~jmp, :MainLoop
 
 ; The next three short procedures all set up D with the correct bit to set in
 ; the instruction and then jump to Destination_SetBits, which does the actual
@@ -338,11 +338,11 @@ M = M+1
   :Destination_A
 @ 040 ; 0x0020
 D = 0|A
-~jmp,:Destination_SetBits
+~jmp, :Destination_SetBits
   :Destination_D
 @ 020 ; 0x0010
 D = 0|A
-~jmp,:Destination_SetBits
+~jmp, :Destination_SetBits
   :Destination_M
 @ 010 ; 0x0008
 D = 0|A
@@ -351,7 +351,7 @@ D = 0|A
   :Destination_SetBits
 @ &core/opcode
 M = D | M
-~jmp,:MainLoop
+~jmp, :MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; LHS operand state                                                          ;;
@@ -366,26 +366,26 @@ M = D | M
 ; that will be handled by the RHS state.
   :LHS
 ; Check for A.
-~loadd,&core/char
-~jeq,\A,:LHS_A
+~loadd, &core/char
+~jeq, \A, :LHS_A
 ; Check for D.
-~loadd,&core/char
-~jeq,\D,:LHS_Done
+~loadd, &core/char
+~jeq, \D, :LHS_Done
 ; Check for M.
-~loadd,&core/char
-~jeq,\M,:LHS_M
+~loadd, &core/char
+~jeq, \M, :LHS_M
 ; Check for 0.
-~loadd,&core/char
-~jeq,\0,:LHS_Z
+~loadd, &core/char
+~jeq, \0, :LHS_Z
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
-~jmp,:Error
+~jmp, :Error
 
 ; Operand is 0, set the zx bit.
   :LHS_Z
 @ 0200 ; 0x0080
 D = 0|A
-~jmp,:LHS_SetBits
+~jmp, :LHS_SetBits
 
 ; Operand is M, set the mr bit and fall through the LHS_A to set the sw bit.
   :LHS_M
@@ -406,8 +406,8 @@ D = D|A
 M = D | M
 ; fall through
   :LHS_Done
-~storec,:Operator,&core/state
-~jmp,:MainLoop
+~storec, :Operator, &core/state
+~jmp, :MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Operator state                                                             ;;
@@ -424,26 +424,26 @@ M = D | M
 ; inc and dec are handled in the RHS state.
   :Operator
 ; add
-~loadd,&core/char
-~jeq,\+,:Operator_Add
+~loadd, &core/char
+~jeq, \+, :Operator_Add
 ; sub
-~loadd,&core/char
-~jeq,\-,:Operator_Sub
+~loadd, &core/char
+~jeq, \-, :Operator_Sub
 ; and
-~loadd,&core/char
-~jeq,\&,:Operator_And
+~loadd, &core/char
+~jeq, \&, :Operator_And
 ; or
-~loadd,&core/char
-~jeq,\|,:Operator_Or
+~loadd, &core/char
+~jeq, \|, :Operator_Or
 ; xor
-~loadd,&core/char
-~jeq,\^,:Operator_Xor
+~loadd, &core/char
+~jeq, \^, :Operator_Xor
 ; not
-~loadd,&core/char
-~jeq,\!,:Operator_Not
+~loadd, &core/char
+~jeq, \!, :Operator_Not
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
-~jmp,:Error
+~jmp, :Error
 
 ; Helpers for the various ALU operations. Same deal as LHS here, they
 ; set the bits needed in D and then jump to SetBits to actually move
@@ -451,22 +451,22 @@ M = D | M
   :Operator_Add
 @ 02000 ; 0x0400
 D = 0|A
-~jmp,:Operator_SetBits
+~jmp, :Operator_SetBits
   :Operator_Sub
 @ 03000 ; 0x0600
 D = 0|A
-~jmp,:Operator_SetBits
+~jmp, :Operator_SetBits
   :Operator_And
 D = 0&A
-~jmp,:Operator_SetBits
+~jmp, :Operator_SetBits
   :Operator_Or
 @ 0400 ; 0x0100
 D = 0|A
-~jmp,:Operator_SetBits
+~jmp, :Operator_SetBits
   :Operator_Xor
 @ 01000 ; 0x0200
 D = 0|A
-~jmp,:Operator_SetBits
+~jmp, :Operator_SetBits
 
 ; This gets special handling because we need to skip the second operand
 ; entirely, since not is a unary operation.
@@ -475,15 +475,15 @@ D = 0|A
 D = 0|A
 @ &core/opcode
 M = D | M
-~storec,:Jump,&core/state
-~jmp,:MainLoop
+~storec, :Jump, &core/state
+~jmp, :MainLoop
 
 ; Write bits to opcode, set next state to RHS, return to main loop.
   :Operator_SetBits
 @ &core/opcode
 M = D | M
-~storec,:RHS,&core/state
-~jmp,:MainLoop
+~storec, :RHS, &core/state
+~jmp, :MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; RHS operand state                                                          ;;
@@ -498,24 +498,24 @@ M = D | M
 ; something that isn't what you asked for -- in the above case D|A.
   :RHS
 ; Check for A. This is the default case, so we set no bits.
-~loadd,&core/char
-~jeq,\A,:RHS_Done
+~loadd, &core/char
+~jeq, \A, :RHS_Done
 ; Check for D.
-~loadd,&core/char
-~jeq,\D,:RHS_D
+~loadd, &core/char
+~jeq, \D, :RHS_D
 ; Check for M.
-~loadd,&core/char
-~jeq,\M,:RHS_M
+~loadd, &core/char
+~jeq, \M, :RHS_M
 ; Check for 1.
-~loadd,&core/char
-~jeq,\1,:RHS_One
+~loadd, &core/char
+~jeq, \1, :RHS_One
 ; If char is \0 we're at end of line, no special cleanup needed so just continue
 ; EOL handling.
-~loadd,&core/char
-~jz,:EndOfLine_Continue
+~loadd, &core/char
+~jz, :EndOfLine_Continue
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
-~jmp,:Error
+~jmp, :Error
 
 ; D operand means we need to set the swap bit (and the first operand should
 ; have been 0, A, or M, but we don't check that here. An appropriate check
@@ -523,13 +523,13 @@ M = D | M
   :RHS_D
 @ 0100 ; 0x0040
 D = 0|A
-~jmp,:RHS_SetBits
+~jmp, :RHS_SetBits
 
 ; Operand is M, set the mr bit.
   :RHS_M
 @ 010000 ; 0x1000
 D = 0|A
-~jmp,:RHS_SetBits
+~jmp, :RHS_SetBits
 
 ; Operand is 1, set op0 to turn add into inc and sub into dec.
 ; If the operator was not add or sub your machine code will be frogs.
@@ -546,8 +546,8 @@ M = D | M
 
 ; Set next state to Jump and we're done here.
   :RHS_Done
-~storec,:Jump,&core/state
-~jmp,:MainLoop
+~storec, :Jump, &core/state
+~jmp, :MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Jump state                                                                 ;;
@@ -561,41 +561,41 @@ M = D | M
 ; the assembler sits in this state until the end of the line is reached.
   :Jump
 ; less than
-~loadd,&core/char
-~jeq,\<,:Jump_LT
+~loadd, &core/char
+~jeq, \<, :Jump_LT
 ; equal
-~loadd,&core/char
-~jeq,\=,:Jump_EQ
+~loadd, &core/char
+~jeq, \=, :Jump_EQ
 ; greater than
-~loadd,&core/char
-~jeq,\>,:Jump_GT
+~loadd, &core/char
+~jeq, \>, :Jump_GT
 ; If char is \0 we're at end of line, no special cleanup needed so just continue
 ; EOL handling.
-~loadd,&core/char
-~jz,:EndOfLine_Continue
+~loadd, &core/char
+~jz, :EndOfLine_Continue
 ; None of the above branches worked, so we're looking at something we don't
 ; understand and should abort the program.
-~jmp,:Error
+~jmp, :Error
 
   :Jump_LT
 @ 04 ; 0x0004
 D = 0|A
-~jmp,:Jump_SetBits
+~jmp, :Jump_SetBits
   :Jump_EQ
 @ 02 ; 0x0002
 D = 0|A
-~jmp,:Jump_SetBits
+~jmp, :Jump_SetBits
   :Jump_GT
 @ 01 ; 0x0001
 D = 0|A
-~jmp,:Jump_SetBits
+~jmp, :Jump_SetBits
 
 ; D contains some pile of bits. Set them in the opcode and remain in the same
 ; state.
   :Jump_SetBits
 @ &core/opcode
 M = D | M
-~jmp,:MainLoop
+~jmp, :MainLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; End of program stuff                                                       ;;
@@ -607,9 +607,9 @@ M = D | M
 ; End of ROM symbol table format is the contents of the symbol table, two words
 ; at a time, followed by a word containing the number of table entries.
   :Finalize
-~call,:Sym_Dump,0
+~call, :Sym_Dump, 0
 ~drop
-~jmp,:Exit
+~jmp, :Exit
 
 ; Error state. Write the input line number as a word, then the current pass
 ; as a byte.
@@ -617,17 +617,17 @@ M = D | M
 ; have an odd number of bytes in it, and a well-formed image should always be
 ; word-aligned.
   :Error
-~loadd,&core/line-num
+~loadd, &core/line-num
 @ &stdout.words
 M = 0|D
-~loadd,&core/pass
+~loadd, &core/pass
 @ &stdout.bytes
 M = 0|D
 ; fall through to Exit
 
   :Exit
 ; Jump off the end of ROM
-~jmp,$7FFF
+~jmp, $7FFF
 
 ; To support labels we need a number of new features:
 ; - understanding ":foo" as defining a label foo at the address at which it occurs
