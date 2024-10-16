@@ -15,13 +15,6 @@
 &LOCALS = 2
 &RETVAL = 3
 
-; ~jmp,address
-; Unconditional jump to the given address. Overwrites A.
-[jmp
-  @ %0
-  = 0|D <=>
-]
-
 ; ~loadd,address
 ; Loads the value at address into D. Overwrites A.
 [loadd
@@ -34,24 +27,6 @@
 [stored
   @ %0
   M = 0|D
-]
-
-; ~jeq,const,address
-; Jump if D is equal to the given const. Overwrites A and D.
-[jeq
-  @ %0
-  D = D-A
-  @ %1
-  = 0|D =
-]
-
-; ~jz,address
-; Jump if D is zero. Usually part of a sequence like:
-; ~loadd,&variable
-; ~jz,:Label
-[jz
-  @ %0
-  = 0|D =
 ]
 
 ; ~call,:function,nargs
