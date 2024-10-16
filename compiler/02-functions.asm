@@ -22,6 +22,20 @@
   = 0|D <=>
 ]
 
+; ~loadd,address
+; Loads the value at address into D. Overwrites A.
+[loadd
+  @ %0
+  D = 0|M
+]
+
+; ~stored,address
+; Stores the value in D at the given address. Overwrites A.
+[stored
+  @ %0
+  M = 0|D
+]
+
 ; ~call,:function,nargs
 ; Calls the given function with the specified number of arguments on top of the
 ; stack. When it returns, the arguments have been popped and replaced with the
@@ -31,14 +45,12 @@
   ~pushvar,&ARGS
   ~pushvar,&LOCALS
   ; set up new ARGS pointer
-  @ &SP
-  D = 0|M
+  ~loadd,&SP
   @ 2
   D = D-A
   @ %1
   D = D-A
-  @ &ARGS
-  M = 0|D
+  ~stored,&ARGS
   ; push return address and jump to function
   ~pushconst,+2
   ~jmp,%0
@@ -46,10 +58,8 @@
   ; return value in &RETVAL and &SP pointing somewhere into the stack frame.
   ; First, drop the rest of the frame from the stack by jumping SP back to the
   ; saved value of ARGS.
-  @ &ARGS
-  D = 0|M
-  @ &SP
-  M = 0|D
+  ~loadd,&ARGS
+  ~stored,&SP
   ; now push the return value and we're done!
   ~pushvar,&RETVAL
 ]
@@ -59,10 +69,8 @@
 ; to the start of the function's local vector and &SP will point just after it.
 [function
   ; locals points to current SP
-  @ &SP
-  D = 0|M
-  @ &LOCALS
-  M = 0|D
+  ~loadd,&SP
+  ~stored,&LOCALS
   ; advance SP by nlocals
   @ %0
   D = 0|A
@@ -75,10 +83,8 @@
 ; then popping and jumping to the saved return address.
 [return
   ~popvar,&RETVAL
-  @ &LOCALS
-  D = 0|M
-  @ &SP
-  M = 0|D
+  ~loadd,&LOCALS
+  ~stored,&SP
   ~popa
   = 0|D <=>
 ]

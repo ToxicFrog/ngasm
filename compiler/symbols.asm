@@ -72,8 +72,7 @@ M = 0&D
 ; Update state pointer
 @ :Sym_Read_State
 D = 0|A
-@ &core/state
-M = 0|D
+~stored,&core/state
 ; fall through to Sym_Read_State
 
 ; This is the actual state. It receives each individual character.
@@ -83,22 +82,19 @@ M = 0|D
 ; *caller* is responsible for that!
   :Sym_Read_State
 ; check for end of line
-@ &core/char
-D = 0|M
+~loadd,&core/char
 @ &sym/next
 A = 0|M
 = 0|D =
 ; check for comma and equals
-@ &core/char
-D = 0|M
+~loadd,&core/char
 @ 054 ; ','
 D = D-A
 @ &sym/next
 A = 0|M
 = 0|D =
 ; check for end of line
-@ &core/char
-D = 0|M
+~loadd,&core/char
 @ 075 ; '='
 D = D-A
 @ &sym/next
@@ -106,14 +102,12 @@ A = 0|M
 = 0|D =
 ; Not at end, so add the just-read character to the label hash.
 ; First, double the existing hash to shift left 1 bit.
-@ &sym/name
-D = 0|M
+~loadd,&sym/name
 D = D+M
 ; Then add the new character to it.
 @ &core/char
 D = D+M
-@ &sym/name
-M = 0|D
+~stored,&sym/name
 ; return to main loop
 ~jmp,:MainLoop
 
@@ -132,8 +126,7 @@ M = 0|D
   :Sym_Bind
 ; last_sym should already be pointing to the free slot at the end of the symbol
 ; table, so write the hash to it
-@ &sym/name
-D = 0|M ; D = symbol
+~loadd,&sym/name ; D = symbol
 @ &sym/last
 A = 0|M
 M = 0|D ; *last_sym = D
@@ -141,8 +134,7 @@ M = 0|D ; *last_sym = D
 @ &sym/last
 M = M+1
 ; write the value we were given to that slot
-@ &sym/value
-D = 0|M
+~loadd,&sym/value
 @ &sym/last
 A = 0|M
 M = 0|D
@@ -181,12 +173,10 @@ A = 0|M
 ; Startup code - set this_sym = &symbols
 @ :&symbols.
 D = 0|A
-@ &sym/this
-M = 0|D
+~stored,&sym/this
   :Sym_Resolve_Loop
 ; Are we at the end of the symbol table? If so, error out.
-@ &sym/last
-D = 0|M
+~loadd,&sym/last
 @ &sym/this
 D = D-M
 @ :Sym_Resolve_Error
@@ -213,8 +203,7 @@ M = M+1
 A = M+1
 D = 0|M
 ; now write the value into &sym_value so the caller can fetch it
-@ &sym/value
-M = 0|D
+~stored,&sym/value
 ; return control to the caller
 @ &sym/next
 A = 0|M
@@ -225,8 +214,7 @@ A = 0|M
 ; return whatever is currently in sym_value.
 ; On pass 2, we error out.
   :Sym_Resolve_Error
-@ &core/pass
-D = 0|M
+~loadd,&core/pass
 @ &sym/next
 A = 0|M
 = 0|D =
@@ -243,12 +231,10 @@ A = 0|M
 ~function,0
 @ :&symbols.
 D = 0|A
-@ &sym/this
-M = 0|D
+~stored,&sym/this
   :Sym_Dump_Iter
 ; this_sym == last_sym? break
-@ &sym/this
-D = 0|M
+~loadd,&sym/this
 @ &sym/last
 D = D-M
 @ :Sym_Dump_Done
