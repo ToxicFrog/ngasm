@@ -80,16 +80,10 @@ M = 0&D
 
 
 ; Called after reading in a symbol. We need to call Sym_Resolve to get the
-; associated value.
+; associated value. &sym/name holds the namehash of the symbol.
   :Val_Read_SymDone
-~storec, :Val_Read_SymResolved, &sym/next
-~jmp, :Sym_Resolve
-
-; Sym_Resolve is finished so copy the value it resolved into value and return
-; control to our caller.
-  :Val_Read_SymResolved
-~loadd, &sym/value
-~stored, &val/value
+~call, :Sym_Resolve, 0
+~popvar, &val/value
 @ &val/next
 A = 0|M
 = 0|D <=>

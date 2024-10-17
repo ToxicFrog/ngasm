@@ -168,52 +168,49 @@ A = 0|M
 ;   :MyState_ResolveDone
 ;   [code to do something with the resolved value]
   :Sym_Resolve
-; Startup code - set this_sym = &symbols
-~storec, :&symbols., &sym/this
-  :Sym_Resolve_Loop
-; Are we at the end of the symbol table? If so, error out.
-~loadd, &sym/last
-@ &sym/this
-D = D-M
-~jz, :Sym_Resolve_Error
-; Check if the current symbol is the one we're looking for.
-@ &sym/this
-A = 0|M ; fixed?
-D = 0|M
-@ &sym/name
-D = D-M
-~jz, :Sym_Resolve_Success
-; It wasn't :( Advance this_sym by two to point to the next entry, and loop.
-@ &sym/this
-M = M+1
-M = M+1
-~jmp, :Sym_Resolve_Loop
+~function, 0
+  ; Startup code - set this_sym = &symbols
+  ~storec, :&symbols., &sym/this
 
-; Called when we successfully find an entry in the symbol table. this_sym holds
-; a pointer to the label cell of the entry, so we need to inc it to get the
-; value cell.
-  :Sym_Resolve_Success
-@ &sym/this
-A = M+1
-D = 0|M
-; now write the value into &sym_value so the caller can fetch it
-~stored, &sym/value
-; return control to the caller
-@ &sym/next
-A = 0|M
-= 0|D <=>
+    :Sym_Resolve_Loop
+  ; Are we at the end of the symbol table? If so, error out.
+  ~loadd, &sym/last
+  @ &sym/this
+  D = D-M
+  ~jz, :Sym_Resolve_Error
+  ; Check if the current symbol is the one we're looking for.
+  @ &sym/this
+  A = 0|M
+  D = 0|M
+  @ &sym/name
+  D = D-M
+  ~jz, :Sym_Resolve_Success
+  ; It wasn't :( Advance this_sym by two to point to the next entry, and loop.
+  @ &sym/this
+  M = M+1
+  M = M+1
+  ~jmp, :Sym_Resolve_Loop
 
-; Called when we cannot find the requested symbol in the table.
-; On pass 1 we may have just not seen the symbol definition yet, so instead we
-; return whatever is currently in sym_value.
-; On pass 2, we error out.
-  :Sym_Resolve_Error
-~loadd, &core/pass
-@ &sym/next
-A = 0|M
-= 0|D =
-; pass != 0, raise an error.
-~jmp, :Error
+  ; Called when we successfully find an entry in the symbol table. this_sym holds
+  ; a pointer to the label cell of the entry, so we need to inc it to get the
+  ; value cell.
+    :Sym_Resolve_Success
+  @ &sym/this
+  A = M+1
+  D = 0|M
+  ; Return the resolved value.
+  ~pushd
+  ~return
+
+  ; Called when we cannot find the requested symbol in the table.
+  ; On pass 0 we may have just not seen the symbol definition yet, so instead we
+  ; return 0.
+  ; On pass 1, we error out.
+    :Sym_Resolve_Error
+  ~loadd, &core/pass
+  ~jnz, :Error
+  ~pushconst, 0
+  ~return
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Sym_Dump                                                                   ;;

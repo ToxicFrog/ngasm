@@ -106,18 +106,11 @@ M = M-D
 
 ; Called after reading in the macro name.
   :Macro_Expand_Resolve
-~storec, :Macro_Expand_ResolveDone, &sym/next
-~jmp, :Sym_Resolve
-
-; At this point sym_val holds the file offset of the macro definition.
+~call, :Sym_Resolve, 0
+~popvar, &macros/address
 ; We need to set the in_macroexpansion flag and seek back to that point
 ; in the input file, which will cause the contents of the macro to be assembled
 ; into the output stream.
-; TODO: macro argument support -- check if &char is \0 (eol) or , and if the
-; latter, after resolving, do a Val_Read and set that as the macro argument.
-  :Macro_Expand_ResolveDone
-~loadd, &sym/value
-~stored, &macros/address ; copy the resolved value into macro_address
 ~loadd, &core/char
 ~jz, :Macro_Expand_Call ; if char is \0, no arguments, call immediately
 ; there must be arguments, so start reading them with Val_Read

@@ -30,3 +30,9 @@
   = 0|D =
 ]
 
+; ~jnz,address
+; Jump if D is nonzero.
+[jnz
+  @ %0
+  = 0|D <>
+]
