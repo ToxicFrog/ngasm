@@ -246,8 +246,10 @@ command 'symbols' '' 'List the contents of the symbol table' [[
     %hash $address name
 ]]
 function commands.symbols.fn(CPU)
+  -- TODO: include line number information where available
+  printf(' \x1b[4m%5s ┊ %5s ┊ %s\x1b[0m\n', 'ID', 'VAL', 'Name')
   for _,sym in ipairs(CPU.symbols) do
-    printf('%5d $%04X %s\n', sym.hash, sym.addr, sym.name or '')
+    printf(' %5d ┊ $%04X ┊ %s\n', sym.hash, sym.addr, sym.name or '')
   end
 end
 
@@ -261,11 +263,15 @@ command 'list' '' 'Disassemble the loaded ROM' [[
   (with the "source" command) and the ROM contains a symbol table.
 ]]
 function commands.list.fn(CPU)
-  for addr,word in ipairs(CPU.rom) do
+  for addr=0, #CPU.rom do
+    local word = CPU.rom[addr]
+    local src = CPU:pc_to_source(addr)
+    if not src:match('%+%d+$') then
+      printf('\n%04X         %s\n', addr, src)
+    end
     local op = vmutil.decode(word)
     if not op.is_nop then
-      printf('%04X - $%-32s %s\n',
-        addr, tostring(op), CPU:pc_to_source(addr))
+      printf('%04X - $%-32s\n', addr, tostring(op))
     end
   end
 end
