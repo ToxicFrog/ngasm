@@ -80,10 +80,14 @@ local function nghash(str)
 end
 
 local function bind(self, name, hash)
+  local bound = false
   for _,sym in ipairs(self.symbols) do
     if sym.hash == hash then
       sym.name = name
-      return
+      if bound then
+        print('WARNING: symbol collision:', name, hash)
+      end
+      bound = true
     end
   end
 end
@@ -92,10 +96,8 @@ end
 -- This will be used to display labels in trace mode.
 function vm:source(source)
   for line in io.lines(source) do
-    -- we only look for labels here; other symbols either point into RAM or
-    -- into the source file, not into ROM.
-    if line:match('^%s*:.*') then
-      local label = line:gsub('%s', ''):gsub(';.*', '')
+    if line:match('^%s*[:%[&].*') then
+      local label = line:gsub('%s', ''):gsub('[;=].*', '')
       bind(self, label, nghash(label))
     end
   end
@@ -183,9 +185,9 @@ function vm:pc_to_source(pc)
     label = label.."+"..pc
   end
   for _,sym in ipairs(self.symbols) do
-    if sym.addr < pc and sym.name then
+    if sym.addr < pc and sym.name and sym.name:match('^:') then
       label = sym.name.."+"..(pc - sym.addr)
-    elseif sym.addr == pc and sym.name then
+    elseif sym.addr == pc and sym.name and sym.name:match('^:') then
       label = sym.name
     end
   end
