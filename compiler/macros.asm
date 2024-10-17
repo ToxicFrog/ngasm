@@ -106,7 +106,8 @@ M = M-D
 
 ; Called after reading in the macro name.
   :Macro_Expand_Resolve
-~call, :Sym_Resolve, 0
+~pushvar, &sym/name
+~call, :Sym_Resolve, 1
 ~popvar, &macros/address
 ; We need to set the in_macroexpansion flag and seek back to that point
 ; in the input file, which will cause the contents of the macro to be assembled

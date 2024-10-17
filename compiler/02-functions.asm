@@ -107,6 +107,31 @@
   = 0|D <=>
 ]
 
+; ~loadnth,&ptr,n
+; Given that &ptr is a variable holding a pointer to an array, loads the value
+; in ptr[n] into both registers.
+[loadnth
+  @ %1 ; index in D
+  D = 0|A
+  @ %0 ; address of pointer in A
+  A = M+D ; dereference to get array address and add index
+  AD = 0|M
+]
+
+; ~loadarg,n ( -- )
+; loads the given argument into the A and D registers
+:__MACRO_LOADARG
+[loadarg
+  ~loadnth, &ARGS, %0
+]
+
+; ~loadlocal,n ( -- )
+; loads the numbered local into the D and A registers
+:__MACRO_LOADLOCAL
+[loadlocal
+  ~loadnth, &LOCALS, %0
+]
+
 ; ~pusharg,n ( -- arg )
 ; pushes the nth argument (0-indexed) onto the stack.
 :__MACRO_PUSHARG
@@ -116,17 +141,6 @@
   @ &ARGS
   A = A+D
   ~pushm
-]
-
-; ~loadlocal,n ( -- )
-; loads the numbered local into the D and A registers
-:__MACRO_LOADLOCAL
-[loadlocal
-  @ %0
-  D = 0|A
-  @ &LOCALS
-  A = M+D
-  AD = 0|M
 ]
 
 ; ~pushlocal,n ( -- local )

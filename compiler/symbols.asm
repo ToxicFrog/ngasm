@@ -59,7 +59,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; This is responsible for reading a symbol from input and leaving its hash in
-; symbol. At the end of reading it calls sym_next; whatever code that points
+; sym/name. At the end of reading it calls sym/next; whatever code that points
 ; to is responsible for doing something with the hash, probably either calling
 ; Bind or Resolve.
 ;
@@ -179,10 +179,9 @@ A = 0|M
   D = D-M
   ~jz, :Sym_Resolve_Error
   ; Check if the current symbol is the one we're looking for.
+  ~loadarg, 0
   @ &sym/this
   A = 0|M
-  D = 0|M
-  @ &sym/name
   D = D-M
   ~jz, :Sym_Resolve_Success
   ; It wasn't :( Advance this_sym by two to point to the next entry, and loop.

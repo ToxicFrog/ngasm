@@ -82,7 +82,8 @@ M = 0&D
 ; Called after reading in a symbol. We need to call Sym_Resolve to get the
 ; associated value. &sym/name holds the namehash of the symbol.
   :Val_Read_SymDone
-~call, :Sym_Resolve, 0
+~pushvar, &sym/name
+~call, :Sym_Resolve, 1
 ~popvar, &val/value
 @ &val/next
 A = 0|M
