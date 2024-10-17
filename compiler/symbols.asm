@@ -222,30 +222,31 @@ A = 0|M
 ; Called at the end of the program, after successfully writing a ROM image.
 ; Dumps the symbol table to stdout in a debugger-friendly format.
   :Sym_Dump
-~function, 0
-~storec, :&symbols., &sym/this
-  :Sym_Dump_Iter
-; this_sym == last_sym? break
-~loadd, &sym/this
-@ &sym/last
-D = D-M
-~jz, :Sym_Dump_Done
-; else dump next table entry and increment this_sym
-@ &sym/this
-A = 0|M
-D = 0|M
-@ &stdout.words
-M = 0|D
-@ &sym/this
-M = M+1
-~jmp, :Sym_Dump_Iter
-  :Sym_Dump_Done
-; write total symbol count and then exit program
-@ :&symbols.
-D = 0|A
-@ &sym/last
-D = M-D
-@ &stdout.words
-M = 0|D
+~function, 1 ; one local for the iterator
+  ~pushconst, :&symbols.
+  ~poplocal, 0
+    :Sym_Dump_Iter
+  ; this_sym == last_sym? break
+  ~loadlocal, 0
+  @ &sym/last
+  D = D-M
+  ~jz, :Sym_Dump_Done
+  ; else dump next table entry and increment this_sym
+  ~loadlocal, 0
+  D = 0|M
+  @ &stdout.words
+  M = 0|D
+  @ &LOCALS
+  A = 0|M
+  M = M+1
+  ~jmp, :Sym_Dump_Iter
+    :Sym_Dump_Done
+  ; write total symbol count and then exit program
+  @ :&symbols.
+  D = 0|A
+  @ &sym/last
+  D = M-D
+  @ &stdout.words
+  M = 0|D
   ~pushconst, 0  ; dummy return value
 ~return

@@ -118,6 +118,17 @@
   ~pushm
 ]
 
+; ~loadlocal,n ( -- )
+; loads the numbered local into the D and A registers
+:__MACRO_LOADLOCAL
+[loadlocal
+  @ %0
+  D = 0|A
+  @ &LOCALS
+  A = M+D
+  AD = 0|M
+]
+
 ; ~pushlocal,n ( -- local )
 ; pushes the nth local (0-indexed) onto the stack
 :__MACRO_PUSHLOCAL
@@ -125,6 +136,27 @@
   @ %0
   D = 0|A
   @ &LOCALS
+  A = 0|M
   A = A+D
   ~pushm
+]
+
+; ~poplocal,n ( local -- )
+; pops a value from the stack and stores it in the nth local
+:__MACRO_POPLOCAL
+[poplocal
+  ; first we compute the destination and temporarily store it atop the stack
+  @ &LOCALS
+  D = 0|M
+  @ %0
+  D = D+A ; D = LOCALS + n
+  @ &SP
+  A = 0|M ; A points to open slot
+  M = 0|D ; store destination address
+  ; get the actual value in D
+  ~popd ; this leaves A pointing to the slot we just popped from
+  ; get the address back
+  A = A+1 ; point to the slot above that
+  A = 0|M ; read address
+  M = 0|D ; store D
 ]
