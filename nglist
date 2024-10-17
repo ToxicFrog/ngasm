@@ -6,4 +6,4 @@
 vm/vm \
   "flash $1" \
   "source ${2:-/dev/null}" \
-  "list" "symbols"
+  "symbols" "list"
