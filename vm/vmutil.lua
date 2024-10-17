@@ -1,3 +1,6 @@
+-- vmutil -- utility functions for the VM that are not directly related to
+-- emulating the CPU.
+
 local bit = require 'bit'
 
 local vmutil = {}
@@ -138,6 +141,32 @@ function vmutil.find_mmio(devs, address)
       return dev, address-base
     end
   end
+end
+
+-- Convert a simple hex dump, consisting of hexadecimal digits and whitespace,
+-- into a flashable ROM array.
+function vmutil.hex2bin(data)
+  local rom = {}
+  local ptr = 0
+  data = data:gsub("%s+", "") -- remove all whitespace
+  assert(#data % 4 == 0, "ROM image has an odd number of bytes")
+  for word in data:gmatch("%x%x%x%x") do
+    rom[ptr] = tonumber(word, 16)
+    ptr = ptr + 1
+  end
+  return rom
+end
+
+-- Convert an xxd hexdump into a ROM image.
+-- xxd has the following format:
+-- AAAAAAAA: XXXX XXXX XXXX XXXX XXXX XXXX XXXX XXXX  ................
+-- where A is the address, X is the actual data, and . is the text dump.
+-- We make the simplifying assumption that the dump is contiguous.
+function vmutil.xxd2bin(data)
+  data = data
+    :gsub('%x+: +', '')
+    :gsub('  .-\n', '')
+  return vmutil.hex2bin(data)
 end
 
 return vmutil

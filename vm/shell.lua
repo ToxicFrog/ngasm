@@ -103,29 +103,6 @@ function commands.help.fn(_, name)
   end
 end
 
-local function hex2bin(data)
-  local rom = {}
-  local ptr = 0
-  data = data:gsub("%s+", "") -- remove all whitespace
-  assert(#data % 4 == 0, "ROM image has an odd number of bytes")
-  for word in data:gmatch("%x%x%x%x") do
-    rom[ptr] = tonumber(word, 16)
-    ptr = ptr + 1
-  end
-  return rom
-end
-
--- Convert an xxd hexdump into a ROM image.
--- xxd has the following format:
--- AAAAAAAA: XXXX XXXX XXXX XXXX XXXX XXXX XXXX XXXX  ................
--- where A is the address, X is the actual data, and . is the text dump.
-local function xxd2bin(data)
-  data = data
-    :gsub('%x+: +', '')
-    :gsub('  .-\n', '')
-  return hex2bin(data)
-end
-
 command 'flash' '</path/to/rom[.hex]>' 'Load a new program into ROM' [[
   Loads the contents of the given file as a ROM. If the file ends in .hex it
   is assumed to be a human-readable hex dump of the ROM; both plain hex dumps
@@ -138,10 +115,10 @@ function commands.flash.fn(CPU, path)
   if path:match('%.hex$') then
     if not data:match("[^0-9A-Fa-f%s]") then
       -- file consists only of hex digits and whitespace, assume plain hexdump
-      data = hex2bin(data)
+      data = vmutil.hex2bin(data)
     else
       -- assume xxd hexdump
-      data = xxd2bin(data)
+      data = vmutil.xxd2bin(data)
     end
   else
     assert(#data % 2 == 0, "ROM image has an odd number of bytes")
