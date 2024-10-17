@@ -160,6 +160,13 @@ A = 0|M
 ; In either case it calls NewInstruction afterwards to reset the parser state,
 ; opcode buffer, etc.
   :EndOfLine_Continue
+; If the opcode is a no-op, skip emitting it entirely and don't increment pc.
+; TODO: this is a major change in behaviour. Turn it on for stage 6.
+;~loadd, &core/opcode
+;D = D!
+;@ $7FFF
+;D = D-A
+;~jz, :NewInstruction
 ; If pass == 0, call _FirstPass, else _SecondPass.
 ~loadd, &core/pass
 ~jz, :EndOfLine_FirstPass
