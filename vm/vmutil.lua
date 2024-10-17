@@ -41,31 +41,7 @@ local function isset(n, bit_index)
   return bit.band(n, 2^bit_index) ~= 0
 end
 
--- Turn an opcode into a human-readable string. Returns nil if it's a no-op.
-local function op_to_str(op)
-  if op.is_nop then
-    return string.format('%04X [nop]', op.opcode)
-  end
-
-  if not op.ci then
-    return string.format('%04X [A = %d]', op.opcode, op.opcode)
-  end
-
-  local s = {}
-
-  -- for _,field in ipairs { 'mr', 'zx', 'sw', 'a', 'd', 'm' } do
-  --   if op[field] == true then table.insert(s, field) end
-  -- end
-
-  local dst = ''
-  if op.a then dst = dst..'A' end
-  if op.d then dst = dst..'D' end
-  if op.m then dst = dst..'M' end
-  if #dst > 0 then
-    table.insert(s, dst)
-    table.insert(s, '=')
-  end
-
+local function alu_to_str(op)
   local alu = {[0] = '&', '|', '^', '!', '+', '+1', '-', '-1'}
   alu = alu[op.alu]
 
@@ -74,19 +50,72 @@ local function op_to_str(op)
   if op.mr then Y = 'M' end
   if op.sw then X,Y = Y,X end
   if op.zx then X = '0' end
-  table.insert(s, X)
-  table.insert(s, alu)
-  table.insert(s, Y)
-
-
-  local jmp = {'JGT', 'JEQ', 'JGE', 'JLT', 'JNE', 'JLE', 'JMP'}
-  jmp = jmp[(op.lt and 4 or 0) + (op.eq and 2 or 0) + (op.gt and 1 or 0)]
-  if #table > 0 and jmp then
-    table.insert(s, ';')
+  -- Some extra prettyprinting here
+  if alu == '!' then
+    -- render negation as "!D" rather than "D!"
+    return alu..X
+  elseif op.zx and (alu == '|' or alu == '^' or alu == '-' or alu == '+') then
+    -- 0 with and, xor, addition, or subtraction is identity
+    return Y
+  elseif op.zx and alu == '&' then
+    -- 0& is constant zero
+    return '0'
+  elseif op.zx and alu == '+1' then
+    -- +1 and -1 constants
+    return '1'
+  elseif op.zx and alu == '-1' then
+    return '-1'
+  elseif alu == '-1' or alu == '+1' then
+    return X..alu
+  else
+    return X..alu..Y
   end
-  table.insert(s, jmp)
+end
 
-  return string.format("%04X [%s]", op.opcode, table.concat(s, " "))
+local function compute_op_to_str(op)
+  local dst = ''
+  if op.a then dst = dst..'A' end
+  if op.d then dst = dst..'D' end
+  if op.m then dst = dst..'M' end
+
+  local alu = alu_to_str(op)
+
+  local jmp = {[0]=' ┊ ', ' ⯈ JGT', ' ⯈ JEQ', ' ⯈ JGE', ' ⯈ JLT', ' ⯈ JNE', ' ⯈ JLE', ' ⯈ JMP'}
+  jmp = jmp[(op.lt and 4 or 0) + (op.eq and 2 or 0) + (op.gt and 1 or 0)]
+
+  if #dst > 0 then
+    return string.format('%3s = %-3s%s', dst, alu, jmp)
+  else
+    return string.format('      %3s%s', alu, jmp)
+  end
+end
+
+local function load_op_to_str(op)
+  -- Annotate with printable ASCII character, if any
+  -- TODO: attempt symbol resolution if a symbol table is loaded
+  -- this will require access to the debugger from op_to_str, which should
+  -- probably be integrated into it anyways
+  local annotation
+  if op.opcode >= 0x20 and op.opcode <= 0x7e then
+    annotation = string.format('\\%c', op.opcode)
+  end
+
+  return string.format('@ %-5d   ┊ %s', op.opcode, annotation or '')
+end
+
+-- Turn an opcode into a human-readable string. Returns nil if it's a no-op.
+local function op_to_str(op)
+  if op.is_nop then
+    return string.format('%04X ┋ nop', op.opcode)
+  end
+
+  local s
+  if not op.ci then
+    s = load_op_to_str(op)
+  else
+    s = compute_op_to_str(op)
+  end
+  return string.format("%04X ┋ %s ", op.opcode, s)
 end
 
 local alu_ops = {
