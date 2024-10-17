@@ -206,23 +206,24 @@ Where:
 - *rhs* is `A`, `D`, `M`, or `1`, and must be omitted if the operator is `!`
 - and *jump* is any combination of the characters `<`, `=`, and `>`
 
-Note a number of restrictions: the left and right hand operators are mandatory
-except for the unary negation operator '!'; 0 can appear only on the LHS and
-1 only on the RHS; the leading '=' is required even if the result is not going
-to be saved aynwhere; the expression is required even if it's not used for
-anything (e.g. in an unconditional jump).
+Note a number of restrictions:
+- the leading `=` is required even if the result is not going to be saved aynwhere;
+- the expression is required even if it's not used for anything (e.g. in an unconditional jump);
+- the left and right hand operands are mandatory (except when using the negation operator '!');
+- 0 can appear only on the LHS, and  1 only on the RHS;
+- `D`, `A`, and `M` can be used as only one operand each (e.g. `D+D` is illega);
+- and you cannot use both `A` and `M` as operands in the same instruction.
 
 This means, in particular, that to store a 0 constant you must write `0 & A`,
 to store a 1 or -1 constant you must write `0 + 1` or `0 - 1`, and to get the
 value of a register or memory location you must write `0 | D` (or similar); you
 cannot write `D = M` as you would in nandgame but must instead write `D = 0 | M`.
 
-It also means that to express an unconditional jump, you must write `= D-A <=>`
-or similar. Throughout the stage 1 code I use `= 0|D <=>` for reasons that
-probably made sense at the time.
+It also means that to express an unconditional jump, you must write some sort
+of expression and discard the result. I use `= 0|D <=>` for this purpose
+throughout the compiler.
 
-There is also no sanity checking to ensure the instruction makes semantic sense.
-In particular, it is the reponsibility of the programmer to adhere to the
-constraint that D can appear only on one side of the expression, and A or M only
-on the other side; if you ask it for `D + D` or `A + M` it will do *something*,
-but not what you asked for.
+Note well that not all of the restrictions above are actually *enforced* by the
+compiler. In particular, expressions that violate the "how many times can you
+use the same register as an operand" rules, like `D+D` or `A+M`, will still
+compile, but emit incorrect code. So please don't do that.
