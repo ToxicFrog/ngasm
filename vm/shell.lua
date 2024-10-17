@@ -232,6 +232,21 @@ function commands.info.fn(CPU)
   eprintf('%s\n', CPU)
 end
 
+command 'stack' '' 'Display stack information' [[
+  Outputs information about the software stack and the pseudo-registers in
+  RAM that hold information about it.
+]]
+function commands.stack.fn(CPU)
+  local SP = CPU.ram[0]
+  eprintf('SP: %04X   ARGS: %04X   LOCALS: %04X   RETURN: %04X\n',
+    SP, CPU.ram[1], CPU.ram[2], CPU.ram[CPU.ram[2]-1] or 0)
+
+  local base = SP - (SP % 0x1000) -- guess at stack base
+  for i=0,SP - base - 1 do
+    eprintf('$%04X:stack[%d]  %04X\n', base+i, i, CPU.ram[base+i])
+  end
+end
+
 command 'step' '' 'Step the CPU one instruction' [[
   Executes one instruction and then outputs the state of the CPU. Equivalent
   to a one-cycle 'trace'.
