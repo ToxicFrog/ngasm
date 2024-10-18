@@ -124,7 +124,7 @@ function commands.flash.fn(CPU, path)
     assert(#data % 2 == 0, "ROM image has an odd number of bytes")
   end
   CPU:flash(data)
-  eprintf("Flashed %d words to ROM. Read %d debug symbols.\n", #CPU.rom, #CPU.symbols)
+  eprintf("Flashed %d words to ROM.\n", #CPU.rom+1)
 end
 
 command 'source' '</path/to/source.asm>' 'Load source code for debugging' [[
@@ -133,12 +133,13 @@ command 'source' '</path/to/source.asm>' 'Load source code for debugging' [[
   in the ROM.
 ]]
 function commands.source.fn(CPU, path)
-  CPU:source(path)
+  CPU.debug:source(path)
   local nlabels = 0
-  for _,sym in ipairs(CPU.symbols) do
+  for _,sym in ipairs(CPU.debug.symbols) do
     if sym.name then nlabels = nlabels + 1 end
   end
-  eprintf("Loaded %s as source code. Identified %d labels.\n", path, nlabels)
+  eprintf("Loaded %s as source code. Found %d symbols with %d names.\n",
+    path, #CPU.debug.symbols, nlabels)
 end
 
 command 'reset' '' 'Reset the emulator' [[
@@ -153,7 +154,7 @@ command 'run' '' 'Run the program to completion' [[
 ]]
 function commands.run.fn(CPU)
   CPU:trace(nil, function(CPU)
-    if CPU.CLK % 1024 == 0 then
+    if CPU.CLK % 8192 == 0 then
       io.stderr:write('\r'..tostring(CPU)..'\x1B[K')
     end
   end)
@@ -241,15 +242,29 @@ function commands.watch.fn(CPU, address)
   CPU:add_watch(tonumber(address))
 end
 
+local function sym_value(sym)
+  if sym.type == 'rom' then
+    return string.format('ROM $%04X', sym.value)
+  elseif sym.type == 'ram' then
+    return string.format('RAM $%04X', sym.value)
+  elseif sym.type == 'constant' then
+    return string.format('0x%04X', sym.value)
+  elseif sym.type == 'macro' then
+    return string.format('fp:%d', sym.value)
+  else
+    return tostring(sym.value)
+  end
+end
+
 command 'symbols' '' 'List the contents of the symbol table' [[
   Displays the contents of the debug symbol table, if any, in the format:
     %hash $address name
 ]]
 function commands.symbols.fn(CPU)
   -- TODO: include line number information where available
-  printf(' \x1b[4m%5s ┊ %5s ┊ %s\x1b[0m\n', 'ID', 'VAL', 'Name')
-  for _,sym in ipairs(CPU.symbols) do
-    printf(' %5d ┊ $%04X ┊ %s\n', sym.hash, sym.addr, sym.name or '')
+  printf(' \x1b[4m%-4s ┊ %-5s ┊ %-9s ┊ %s\x1b[0m\n', 'Line', 'ID', 'Value', 'Name')
+  for _,sym in ipairs(CPU.debug.symbols) do
+    printf(' %4d ┊ %5d ┊ %9s ┊ %s\n', sym.line, sym.id, sym_value(sym), sym.name or '')
   end
 end
 

@@ -1,0 +1,112 @@
+local vmdebug = {}
+vmdebug.__index = vmdebug
+
+function vmdebug.new(CPU)
+  local dbg = {
+    cpu = CPU;
+    watches = {};
+    symbols = {};
+    breakpoints = {};
+  }
+  return setmetatable(dbg, vmdebug)
+end
+
+function vmdebug:reset()
+  self.symbols = {}
+  self.watches = {}
+  self.breakpoints = {}
+  return self
+end
+
+local function nameid(str)
+  local hash = 0
+  for char in str:gmatch('.') do
+    hash = (hash*2 + char:byte()) % 0x10000
+  end
+  return hash
+end
+
+local symbol_types = {
+  [':'] = 'rom';
+  ['&'] = 'ram';
+  ['#'] = 'constant';
+  ['['] = 'macro';
+}
+
+local symbol_type_order = { rom = 1, ram = 2, constant = 3, macro = 4 }
+local function sort_syms(x, y)
+  if x.type == y.type then return x.value < y.value end
+  return (symbol_type_order[x.type] or 0) < (symbol_type_order[y.type] or 0)
+end
+
+local function bind(self, id, name, line)
+  for _,sym in ipairs(self.symbols) do
+    if sym.id == id then
+      if sym.name then
+        print(string.format("WARNING: id %d used for both %s (at line %d) and %s (at line %d)",
+          id, sym.name, sym.line or -1, name, line or -1))
+      end
+      sym.name = name
+      sym.line = line
+      sym.type = symbol_types[name:sub(1,1)] or '???'
+    end
+  end
+end
+
+-- Load the given file as the source code for the loaded ROM, and attempt to
+-- match up entries in the symbol table with declarations in the source.
+-- This will be used to display labels for commands like list, trace, and symbols.
+function vmdebug:source(source)
+  self:load_symbols()
+  local n = 0
+  for line in io.lines(source) do
+    n = n+1
+    if line:match('^%s*[:%[&#].*') then
+      local label = line:gsub('%s', ''):gsub('[;=].*', '')
+      bind(self, nameid(label), label, n)
+    end
+  end
+  -- Re-sort the symbol table using the new name and type information.
+  table.sort(self.symbols, sort_syms)
+end
+
+function vmdebug:load_symbols()
+  -- print(self, self.cpu)
+  -- for k,v in pairs(self.cpu) do print('', k, v) end
+  local rom = self.cpu.rom
+  self.symbols = {}
+  local symsize = rom[#rom]
+  -- rough heuristic for whether there is actually a symbol table at the end
+  -- of the ROM.
+  if symsize % 2 == 0 and symsize > 0 and symsize < #rom/4 then
+    for addr = #rom - symsize,#rom-2,2 do
+      table.insert(self.symbols,
+        { id = rom[addr], value = rom[addr+1] })
+    end
+  end
+  table.sort(self.symbols, sort_syms)
+  return self
+end
+
+function vmdebug:add_watch(address)
+  self.watches[address] = 0
+end
+
+-- Returns true if the breakpoint was set, false if unset.
+function vmdebug:toggle_breakpoint(address)
+  local set = self.breakpoints[address]
+  self.breakpoints[address] = not set
+  return not set
+end
+
+function vmdebug:check_watches()
+  for addr,val in pairs(self.watches) do
+    if self.cpu.ram[addr] ~= val then
+      print(self)
+      self.watches[addr] = self.cpu.ram[addr]
+    end
+  end
+end
+
+
+return vmdebug

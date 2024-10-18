@@ -3,6 +3,7 @@
 
 local bit = require 'bit'
 local vmutil = require 'vmutil'
+local vmdebug = require 'vmdebug'
 
 local vm = {}
 vm.__index = vm
@@ -22,11 +23,8 @@ function vm.new()
     rom = {};
     -- peripherals
     dev = {};
-    -- debugging
-    watches = {};
-    symbols = {};
-    breakpoints = {};
   }
+  new_vm.debug = vmdebug.new(new_vm)
 
   setmetatable(new_vm, vm)
   new_vm:reset()
@@ -34,6 +32,7 @@ function vm.new()
 end
 
 -- Reset the VM: set all registers and RAM to 0, and reopen any IO channels.
+-- Does not flash ROM or reset any watchpoints/breakpoints.
 function vm:reset()
   self.A, self.D, self.IR, self.PC, self.CLK = 0,0,0,0,0
   self.ram = vmutil.fill(0, 0, MAX_RAM)
@@ -48,59 +47,15 @@ end
 -- Flash the VM with a new program.
 -- If rom is a table, the VM will hold a reference to it (not a copy).
 -- If rom is a string, it will be parsed as a stream of 16-bit words.
+-- Clears all watchpoints/breakpoints and the symbol table.
 function vm:flash(rom)
   if type(rom) == 'table' then
     self.rom = rom
   else
     self.rom = vmutil.string_to_words(rom)
   end
-  self.symbols = {}
-  local symsize = self.rom[#self.rom]
-  -- rough heuristic for whether there is actually a symbol table at the end
-  -- of the ROM.
-  -- TODO: don't even attempt to load this until told to load the source
-  -- code; then mark this as the symbol table and possibly trim it from
-  -- the end of the ROM or otherwise hide it from LIST.
-  if symsize % 2 == 0 and symsize > 0 and symsize < #self.rom/4 then
-    for addr = #self.rom - symsize,#self.rom-2,2 do
-      local sym = { hash = self.rom[addr], addr = self.rom[addr+1] }
-      table.insert(self.symbols, sym)
-    end
-  end
-  table.sort(self.symbols, function(x,y) return x.addr < y.addr end)
+  self.debug:reset()
   return self
-end
-
-local function nghash(str)
-  local hash = 0
-  for char in str:gmatch('.') do
-    hash = (hash*2 + char:byte()) % 0x10000
-  end
-  return hash
-end
-
-local function bind(self, name, hash)
-  local bound = false
-  for _,sym in ipairs(self.symbols) do
-    if sym.hash == hash then
-      sym.name = name
-      if bound then
-        print('WARNING: symbol collision:', name, hash)
-      end
-      bound = true
-    end
-  end
-end
-
--- Load the given file as the source code for the loaded ROM.
--- This will be used to display labels in trace mode.
-function vm:source(source)
-  for line in io.lines(source) do
-    if line:match('^%s*[:%[&].*') then
-      local label = line:gsub('%s', ''):gsub('[;=].*', '')
-      bind(self, label, nghash(label))
-    end
-  end
 end
 
 -- Run n steps of the VM. If n is omitted, run until program completion.
@@ -118,12 +73,12 @@ function vm:trace(n, trace_fn)
       -- no more program code!
       break
     end
-    if self.breakpoints[self.PC] then
-      io.stderr:write(string.format("\nBreakpoint hit: PC=$%04X\n%s\n", self.PC, self))
+    self:step()
+    self.debug:check_watches()
+    if self.debug.breakpoints[self.PC] then
+      io.stderr:write(string.format("\n%s\nBreakpoint hit: PC=$%04X", self, self.PC))
       break
     end
-    self:step()
-    self:check_watches()
     trace_fn(self)
   end
   return self
@@ -184,10 +139,10 @@ function vm:pc_to_source(pc)
   if pc > 0 then
     label = label.."+"..pc
   end
-  for _,sym in ipairs(self.symbols) do
-    if sym.addr < pc and sym.name and sym.name:match('^:') then
-      label = sym.name.."+"..(pc - sym.addr)
-    elseif sym.addr == pc and sym.name and sym.name:match('^:') then
+  for _,sym in ipairs(self.debug.symbols) do
+    if sym.type == 'rom' and sym.value < pc and sym.name and sym.name:match('^:') then
+      label = sym.name.."+"..(pc - sym.value)
+    elseif sym.value == pc and sym.name and sym.name:match('^:') then
       label = sym.name
     end
   end
@@ -256,26 +211,6 @@ function vm:detach(base)
   self.dev[base]:detach()
   self.dev[base] = nil
   return self
-end
-
-function vm:add_watch(address)
-  self.watches[address] = 0
-end
-
--- Returns true if the breakpoint was set, false if unset.
-function vm:toggle_breakpoint(address)
-  local set = self.breakpoints[address]
-  self.breakpoints[address] = not set
-  return not set
-end
-
-function vm:check_watches()
-  for addr,val in pairs(self.watches) do
-    if self.ram[addr] ~= val then
-      print(self)
-      self.watches[addr] = self.ram[addr]
-    end
-  end
 end
 
 -- end of library
