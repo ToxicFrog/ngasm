@@ -55,7 +55,10 @@ local function run_shell(CPU)
   -- interactive mode
   printf('Emulator ready. Type "help" for a list of commands.\n> ')
   for line in io.lines() do
-    run(CPU, line)
+    local _,err = pcall(run, CPU, line)
+    if err then
+      eprintf('Error in command: %s', err)
+    end
     printf('\n> ')
   end
   print('Goodbye!')
