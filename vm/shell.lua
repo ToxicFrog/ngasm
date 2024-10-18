@@ -178,7 +178,7 @@ command 'break' '[addr]' 'Set or remove a breakpoint' [[
 ]]
 commands['break'].fn = function(CPU, address)
   if address then
-    address = tonumber(address)
+    address = CPU.debug:to_address(address)
     local set = CPU.debug:toggle_breakpoint(address)
     eprintf('%s breakpoint at address $%04X\n',
       set and "Added" or "Removed", address)
@@ -237,12 +237,25 @@ function commands.step.fn(CPU)
   printf('%s\n', CPU)
 end
 
-command 'watch' 'address' 'Watch for changes to a memory address' [[
+command 'watch' '[address]' 'Watch for changes to a memory address' [[
   Watches for changes to a memory address. Whenever the value at the address
-  changes, it outputs the state of the CPU afterwards.
+  changes, it outputs the state of the CPU afterwards. Register names are
+  allowed and will watch whatever that register points at.
+
+  With no arguments, lists all watches. With the address of an existing watch,
+  removes it.
 ]]
 function commands.watch.fn(CPU, address)
-  CPU.debug:add_watch(tonumber(address))
+  if address then
+    address = CPU.debug:to_address(address)
+    local set = CPU.debug:toggle_watch(address)
+    eprintf('%s watch on RAM address $%04X\n',
+      set and "Added" or "Removed", address)
+  else
+    for addr,value in pairs(CPU.debug.watches) do
+      printf('%04X - $%04X\n', addr, value)
+    end
+  end
 end
 
 local function sym_value(sym)

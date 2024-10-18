@@ -91,8 +91,14 @@ function vmdebug:load_symbols()
   return self
 end
 
-function vmdebug:add_watch(address)
-  self.watches[address] = 0
+function vmdebug:toggle_watch(address)
+  if self.watches[address] then
+    self.watches[address] = nil
+    return false
+  else
+    self.watches[address] = self.cpu.ram[address]
+    return true
+  end
 end
 
 -- Returns true if the breakpoint was set, false if unset.
