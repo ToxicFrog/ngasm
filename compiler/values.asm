@@ -154,6 +154,8 @@ M = 0+D
 @ &val/next
 A = 0|M
 = 0|D =
+; if not at end of line then &core/char holds the digit and we need
+; to process it
 ; are we in macroexpansion? then we want MacroArg_Expansion below
 ~loadd, &macros/in-expansion
 @ :Val_Read_MacroArg_Expansion
@@ -161,7 +163,8 @@ A = 0|M
 ; otherwise we're in macro definition and just emit a placeholder value
 ; this is a behaviour difference from stage 4, which emitted uninitialized
 ; memory instead
-~storec, 0, &val/value
+~loadd, &core/char
+~stored, &val/value
 ~jmp, :Val_Read_MacroArg_Done
   :Val_Read_MacroArg_Expansion
 ; read the argument off the macroexpansion stack and store it into value
