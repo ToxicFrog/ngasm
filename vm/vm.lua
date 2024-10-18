@@ -64,6 +64,7 @@ function vm:run(n)
 end
 
 function vm:trace(n, trace_fn)
+  local start = true -- skip breakpoint on the same instruction we resume on
   trace_fn = trace_fn or function(vm)
     if not vmutil.decode(vm.IR).is_nop then print(vm) end
   end
@@ -73,12 +74,13 @@ function vm:trace(n, trace_fn)
       -- no more program code!
       break
     end
-    self:step()
-    self.debug:check_watches()
-    if self.debug.breakpoints[self.PC] then
+    if self.debug.breakpoints[self.PC] and not start then
       io.stderr:write(string.format("\n%s\nBreakpoint hit: PC=$%04X", self, self.PC))
       break
     end
+    start = false
+    self:step()
+    self.debug:check_watches()
     trace_fn(self)
   end
   return self
