@@ -80,7 +80,7 @@ local function compute_op_to_str(op)
 
   local alu = alu_to_str(op)
 
-  local jmp = {[0]=' ┊ ', ' ⯈ JGT', ' ⯈ JEQ', ' ⯈ JGE', ' ⯈ JLT', ' ⯈ JNE', ' ⯈ JLE', ' ⯈ JMP'}
+  local jmp = {[0]=' ┊    ', ' ⯈ JGT', ' ⯈ JEQ', ' ⯈ JGE', ' ⯈ JLT', ' ⯈ JNE', ' ⯈ JLE', ' ⯈ JMP'}
   jmp = jmp[(op.lt and 4 or 0) + (op.eq and 2 or 0) + (op.gt and 1 or 0)]
 
   if #dst > 0 then
@@ -100,13 +100,13 @@ local function load_op_to_str(op)
     annotation = string.format('\\%c', op.opcode)
   end
 
-  return string.format('@ %-5d   ┊ %s', op.opcode, annotation or '')
+  return string.format('@ %-5d   ┊ %-3s', op.opcode, annotation or '')
 end
 
 -- Turn an opcode into a human-readable string. Returns nil if it's a no-op.
 local function op_to_str(op)
   if op.is_nop then
-    return string.format('%04X ┋ nop', op.opcode)
+    return string.format('%04X ┋ nop       ┊     ', op.opcode)
   end
 
   local s
