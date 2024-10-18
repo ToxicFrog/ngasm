@@ -179,11 +179,11 @@ command 'break' '[addr]' 'Set or remove a breakpoint' [[
 commands['break'].fn = function(CPU, address)
   if address then
     address = tonumber(address)
-    local set = CPU:toggle_breakpoint(address)
+    local set = CPU.debug:toggle_breakpoint(address)
     eprintf('%s breakpoint at address $%04X\n',
       set and "Added" or "Removed", address)
   else
-    for addr,enabled in pairs(CPU.breakpoints) do
+    for addr,enabled in pairs(CPU.debug.breakpoints) do
       if enabled then
         local op = vmutil.decode(CPU.rom[addr])
         printf('%04X - $%-32s %s\n',
@@ -242,7 +242,7 @@ command 'watch' 'address' 'Watch for changes to a memory address' [[
   changes, it outputs the state of the CPU afterwards.
 ]]
 function commands.watch.fn(CPU, address)
-  CPU:add_watch(tonumber(address))
+  CPU.debug:add_watch(tonumber(address))
 end
 
 local function sym_value(sym)
