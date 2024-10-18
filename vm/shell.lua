@@ -271,25 +271,38 @@ function commands.symbols.fn(CPU)
   end
 end
 
-command 'list' '' 'Disassemble the loaded ROM' [[
-  Disassembles the contents of ROM. Each line has the format:
-    RRRR - $IIII [desc]    :Label+n
-  Where R is the ROM address, I the underlying opcode, desc the human-
-  readable description of the operation, label the most recent label in
-  the source code, and +n the number of words of ROM past that label we
-  are. Label information is only available if the source code is loaded
-  (with the "source" command) and the ROM contains a symbol table.
+command 'list' '[address] [size]' 'Disassemble the loaded ROM' [[
+  Disassembles the contents of ROM.
+
+  [address] is the ROM address to start at; it can be any numeric address, or
+  the name of a register (A, D, or PC) for the value held in that register. The
+  default if unspecified is 'PC'.
+
+  [size] is the number of instructions to disassemble. Note that, since no-ops
+  are skipped, fewer instructions may be displayed. You can also specify 'this'
+  to disassemble to the next ROM label, or 'all' to disassemble to the end of
+  ROM. The default is 'this'.
+
+  Instructions have the format:
+    RRRR - $IIII | asm | annotation
+  Where R is the ROM address, I the underlying opcode, asm the human-readable
+  form, and annotation additional information such as the jump type (for jumps)
+  or alternate data representations (for constants).
+
+  If a symbol table is present in the ROM and the source code was loaded, labels
+  will additionally get their own lines.
 ]]
-function commands.list.fn(CPU)
-  for addr=0, #CPU.rom do
-    local word = CPU.rom[addr]
-    local src = CPU:pc_to_source(addr)
-    if not src:match('%+%d+$') then
-      printf('\n%04X         %s\n', addr, src)
-    end
-    local op = vmutil.decode(word)
-    if not op.is_nop then
-      printf('%04X - $%-32s\n', addr, tostring(op))
+function commands.list.fn(CPU, address, size)
+  address = CPU.debug:to_address(address or 'pc')
+  local to_ret = not size or size == 'this'
+  size = tonumber(size) or math.huge
+
+  for addr,type,info in CPU.debug:disassemble(address, size) do
+    if type == 'label' then
+      if addr ~= address and to_ret then break end
+      printf('\n%04X         %s\n', addr, info)
+    elseif not info.is_nop then
+      printf('%04X - $%-32s\n', addr, tostring(info))
     end
   end
 end

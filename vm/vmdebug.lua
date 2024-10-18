@@ -1,3 +1,5 @@
+local vmutil = require 'vmutil'
+
 local vmdebug = {}
 vmdebug.__index = vmdebug
 
@@ -85,6 +87,7 @@ function vmdebug:load_symbols()
     end
   end
   table.sort(self.symbols, sort_syms)
+  rom.size = rom.size - symsize
   return self
 end
 
@@ -108,5 +111,32 @@ function vmdebug:check_watches()
   end
 end
 
+function vmdebug:disassemble(base, size)
+  base = base or 0
+  size = size or math.huge
+  local eof = math.min(self.cpu.rom.size - 1, base + size - 1)
+
+  return coroutine.wrap(function()
+    for addr=base,eof do
+      local word = self.cpu.rom[addr]
+      local src = self.cpu:pc_to_source(addr)
+      if not src:match('%+%d+$') then
+        coroutine.yield(addr, 'label', src)
+      end
+      local op = vmutil.decode(word)
+      coroutine.yield(addr, 'op', op)
+    end
+    return nil
+  end)
+end
+
+-- TODO: support mapping symbols to addresses
+-- TODO: implement to_symbol()
+local registers = { A = true; D = true; IR = true; PC = true; }
+function vmdebug:to_address(str)
+  if registers[str:upper()] then return self.cpu[str:upper()] end
+  str = str:gsub('^%$', '0x')
+  return assert(tonumber(str), 'invalid address: '..str)
+end
 
 return vmdebug

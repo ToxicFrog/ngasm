@@ -54,6 +54,7 @@ function vm:flash(rom)
   else
     self.rom = vmutil.string_to_words(rom)
   end
+  self.rom.size = #self.rom+1
   self.debug:reset()
   return self
 end
@@ -70,7 +71,7 @@ function vm:trace(n, trace_fn)
   end
   n = n or math.huge
   for i=1,n do
-    if not self.rom[self.PC] then
+    if self.PC >= self.rom.size or not self.rom[self.PC] then
       -- no more program code!
       break
     end
