@@ -151,25 +151,32 @@ command 'reset' '' 'Reset the emulator' [[
 ]]
 commands.reset.fn = vm.reset
 
-command 'run' '' 'Run the program to completion' [[
-  Starts the emulator and runs the program in ROM until it exits (by jumping
-  to a location past the end of ROM).
+command 'run' '[count]' 'Run the program' [[
+  Starts the emulator and runs the program until [count] instructions have been
+  dispatched (including nops). If [count] is unspecified, runs until the program
+  exits (by jumping past the end of ROM).
 ]]
-function commands.run.fn(CPU)
-  CPU:trace(nil, function(CPU)
-    if CPU.CLK % 8192 == 0 then
-      io.stderr:write('\r'..tostring(CPU)..'\x1B[K')
-    end
+function commands.run.fn(CPU, count)
+  CPU:trace(tonumber(count) or math.huge, function(CPU)
+    -- if CPU.CLK % 8192 == 0 then
+    --   io.stderr:write('\r'..tostring(CPU)..'\x1B[K')
+    -- end
   end)
-  io.stderr:write('\n')
+  -- io.stderr:write('\n')
 end
 
-command 'trace' '' 'Run the program while printing CPU state' [[
-  As run, but after executing each instruction, prints out the contents of the
-  registers, the word in memory pointed at by the A register, and the just-
-  executed and next-to-be-executed instructions.
+command 'trace' '[count]' 'Run the program while printing CPU state' [[
+  This is equivalent to 'run', but prints the machine state after each one.
+  This consists of the address and value of the just-executed opcode, its
+  disassembly, the number of ops executed since boot, both registers, the
+  contents of memory pointed to by the A register, and the address of the next
+  instruction to be executed.
+  Where symbol table information is available, it also prints the label of the
+  instruction just executed.
 ]]
-commands.trace.fn = vm.trace
+function commands.trace.fn(CPU, count)
+  CPU:trace(tonumber(count) or math.huge)
+end
 
 command 'break' '[addr]' 'Set or remove a breakpoint' [[
   Sets a breakpoint at the given address. When encountered by 'run' or 'trace',

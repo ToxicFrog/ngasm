@@ -16,7 +16,9 @@ local MAX_RAM = 2^15
 function vm.new()
   local new_vm = {
     -- registers
-    A = 0; D = 0; IR = 0; PC = 0; CLK = 0;
+    A = 0; D = 0; IR = 0; PC = 0;
+    -- pseudo-registers; PPC is previous PC, CLK is instruction count
+    PPC = 0; CLK = 0;
     -- memory. These are tables mapping memory address (which may be 0!) to
     -- contents.
     ram = {};
@@ -34,7 +36,7 @@ end
 -- Reset the VM: set all registers and RAM to 0, and reopen any IO channels.
 -- Does not flash ROM or reset any watchpoints/breakpoints.
 function vm:reset()
-  self.A, self.D, self.IR, self.PC, self.CLK = 0,0,0,0,0
+  self.A, self.D, self.IR, self.PC, self.PPC, self.CLK = 0,0,0,0,0,0
   self.ram = vmutil.fill(0, 0, MAX_RAM)
   self.stdin = vmutil.reopen(self.stdin, self.infile, 'rb')
   self.stdout = vmutil.reopen(self.stdout, self.outfile, 'wb')
@@ -94,7 +96,7 @@ function vm:step()
   self.IR = self.rom[self.PC]
   -- increment PC - do this now rather than after instruction dispatch so we
   -- don't JMP to the wrong address
-  self.PC = self.PC+1
+  self.PPC,self.PC = self.PC,self.PC+1
 
   -- decode instruction. If load immediate, we just handle it here.
   local op = vmutil.decode(self.IR)
@@ -157,10 +159,10 @@ end
 function vm:__tostring()
   -- we use self.ram here rather than ram_read() because if A is pointing to
   -- an MMIO device we don't want to actuate it while printing the VM state!
-  return string.format("VM (IR:%-20s CLK:%04X D:%04X A:%04X MEM:%04X PC:%04X @ %s)",
-    vmutil.decode(self.IR),
+  return string.format("VM (PC:%04X IR:%-20s CLK:%04X D:%04X A:%04X MEM:%04X NEXT:%04X @ %s)",
+    self.PPC, vmutil.decode(self.IR),
     self.CLK, self.D, self.A, self.ram[self.A] or 0xFFFF, self.PC,
-    self:pc_to_source(self.PC))
+    self:pc_to_source(self.PPC))
 end
 
 -- Read RAM at the given address. This might return actual memory contents
