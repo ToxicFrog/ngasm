@@ -95,9 +95,18 @@ function vmutil.find_mmio(devs, address)
   end
 end
 
+function vmutil.hex2bin(data)
+  local buf = {}
+  data = data:gsub("%s+", "") -- remove all whitespace
+  for i=1,#data,2 do
+    table.insert(buf, string.char(tonumber(data:sub(i,i+1), 16)))
+  end
+  return table.concat(buf, '')
+end
+
 -- Convert a simple hex dump, consisting of hexadecimal digits and whitespace,
 -- into a flashable ROM array.
-function vmutil.hex2bin(data)
+function vmutil.hex2rom(data)
   local rom = {}
   local ptr = 0
   data = data:gsub("%s+", "") -- remove all whitespace
@@ -114,11 +123,11 @@ end
 -- AAAAAAAA: XXXX XXXX XXXX XXXX XXXX XXXX XXXX XXXX  ................
 -- where A is the address, X is the actual data, and . is the text dump.
 -- We make the simplifying assumption that the dump is contiguous.
-function vmutil.xxd2bin(data)
+function vmutil.xxd2rom(data)
   data = data
     :gsub('%x+: +', '')
     :gsub('  .-\n', '')
-  return vmutil.hex2bin(data)
+  return vmutil.hex2rom(data)
 end
 
 return vmutil

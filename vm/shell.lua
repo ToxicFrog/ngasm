@@ -118,10 +118,10 @@ function commands.flash.fn(CPU, path)
   if path:match('%.hex$') then
     if not data:match("[^0-9A-Fa-f%s]") then
       -- file consists only of hex digits and whitespace, assume plain hexdump
-      data = vmutil.hex2bin(data)
+      data = vmutil.hex2rom(data)
     else
       -- assume xxd hexdump
-      data = vmutil.xxd2bin(data)
+      data = vmutil.xxd2rom(data)
     end
   else
     assert(#data % 2 == 0, "ROM image has an odd number of bytes")

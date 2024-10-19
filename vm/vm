@@ -1,4 +1,14 @@
 #!/usr/bin/env bash
+#
+# Run the nandgame VM.
+# With no arguments, enters interactive mode.
+# With arguments, executes each argument as an interactive-mode command, then
+# exits.
+# To run setup commands and then enter interactive mode, use "shell" as the
+# last command.
+#
+# To run the compiler or the lister, see the `ngasm` and `nglist` scripts in
+# the top-level directory.
 
 LUA=${LUA:=luajit}
 VMDIR="$(dirname "$0")"
