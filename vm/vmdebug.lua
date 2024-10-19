@@ -126,7 +126,7 @@ function vmdebug:disassemble(base, size)
   return coroutine.wrap(function()
     for addr=base,eof do
       local word = self.cpu.rom[addr]
-      local src = self.cpu:pc_to_source(addr)
+      local src = self:pc_to_label(addr)
       if not src:match('%+%d+$') then
         coroutine.yield(addr, 'label', src)
       end
@@ -164,13 +164,51 @@ function vmdebug:resolve(symbol, type)
   return info.value, info.type
 end
 
--- TODO: implement to_symbol()
+-- Turn a typed number or label into an address.
+-- If it's a register name or a number, returns the contents of the register
+-- or the parsed number with no type checking.
+-- Otherwise, tries to resolve it in the symbol table, with optional type
+-- checking, e.g. a request for a 'rom' address will not resolve if the symbol
+-- table entry is of type 'ram'.
 local registers = { A = true; D = true; IR = true; PC = true; }
 function vmdebug:to_address(str, type)
   if registers[str:upper()] then return self.cpu[str:upper()] end
   str = str:gsub('^%$', '0x')
   if tonumber(str) then return tonumber(str) end
   return assert(self:resolve(str, type))
+end
+
+-- Turn an address into the set of symbols with that value.
+-- Returns a table mapping symbol names to symbol info, or nil if no symbols
+-- with the requested value exist.
+function vmdebug:to_symbols(value)
+  local syms = {}
+  for _,info in ipairs(self.symbols) do
+    if info.value == value then
+      syms[info.name] = info
+    end
+  end
+  return next(syms) and syms or nil
+end
+
+-- Turns a program counter value into a ":Label+offset" label.
+-- Returns nil if no symbol table is loaded.
+function vmdebug:pc_to_label(pc)
+  if #self.symbols == 0 then return nil end
+
+  local symbol = nil
+  for _,info in ipairs(self.symbols) do
+    if info.type ~= 'rom' or info.value > pc then break end
+    symbol = info
+  end
+  if symbol then
+    if symbol.value == pc then return symbol.name end
+    return symbol.name..'+'..(pc - symbol.value)
+  elseif pc == 0 then
+    return '(start)'
+  else
+    return '(start)+'..pc
+  end
 end
 
 return vmdebug

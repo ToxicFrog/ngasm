@@ -139,30 +139,16 @@ function vm:dispatch(op)
   end
 end
 
-function vm:pc_to_source(pc)
-  local label = "(start)"
-  if pc > 0 then
-    label = label.."+"..pc
-  end
-  for _,sym in ipairs(self.debug.symbols) do
-    if sym.type == 'rom' and sym.value < pc and sym.name and sym.name:match('^:') then
-      label = sym.name.."+"..(pc - sym.value)
-    elseif sym.value == pc and sym.name and sym.name:match('^:') then
-      label = sym.name
-    end
-  end
-  return label
-end
-
 -- Output the VM state as a human-readable string, for debugging. Will be called
 -- automatically by print(), tostring(), etc.
 function vm:__tostring()
   -- we use self.ram here rather than ram_read() because if A is pointing to
   -- an MMIO device we don't want to actuate it while printing the VM state!
-  return string.format("VM (PC:%04X IR:%-20s CLK:%04X D:%04X A:%04X MEM:%04X NEXT:%04X @ %s)",
+  local source = self.debug:pc_to_label(self.PPC)
+  return string.format("VM (PC:%04X IR:%-20s CLK:%04X D:%04X A:%04X MEM:%04X NEXT:%04X %s%s)",
     self.PPC, vmutil.decode(self.IR),
     self.CLK, self.D, self.A, self.ram[self.A] or 0xFFFF, self.PC,
-    self:pc_to_source(self.PPC))
+    source and '@ ' or '', source or '')
 end
 
 -- Read RAM at the given address. This might return actual memory contents
