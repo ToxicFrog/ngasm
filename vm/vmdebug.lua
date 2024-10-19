@@ -88,7 +88,7 @@ function vmdebug:load_symbols()
     end
   end
   table.sort(self.symbols, sort_syms)
-  rom.size = rom.size - symsize
+  rom.size = #rom - symsize
   return self
 end
 
