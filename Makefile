@@ -3,8 +3,14 @@ next: next/ngasm.next.next.hex
 clean:
 	rm next/*
 
-next/ngasm.asm: compiler/*.asm
-	cat compiler/*.asm > next/ngasm.asm
+next/prelude.asm: compiler/prelude/*.asm
+	cat compiler/prelude/*.asm > $@
+
+next/postscript.asm: compiler/postscript/*.asm
+	cat compiler/postscript/*.asm > $@
+
+next/ngasm.asm: compiler/*.asm next/prelude.asm next/postscript.asm
+	cat next/prelude.asm compiler/*.asm next/postscript.asm > next/ngasm.asm
 
 # Build the 'next' version of the compiler, i.e. build the current source
 # code using the latest stable version of the compiler.
