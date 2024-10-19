@@ -211,4 +211,94 @@ function vmdebug:pc_to_label(pc)
   end
 end
 
+local function alu_to_str(op)
+  local alu = {
+    [0] = 'X&Y', 'X|Y', 'X^Y', '!X',
+          'X+Y', 'X+1', 'X-Y', 'X-1',
+  }
+  alu = alu[op.alu]
+
+  local X,Y = 'D','A'
+  if op.mr then Y = 'M' end
+  if op.sw then X,Y = Y,X end
+  if op.zx then X = '0' end
+
+  return (alu:gsub('X', X)
+    :gsub('Y', Y)
+    :gsub('0[|^+]', '')
+    :gsub('1&', ''))
+end
+
+local function compute_op_to_str(op)
+  local dst = (op.a and 'A' or '') .. (op.d and 'D' or '') .. (op.m and 'M' or '')
+  local alu = alu_to_str(op)
+  local asm
+  if #dst > 0 then
+    asm = string.format('%3s = %-3s', dst, alu)
+  else
+    asm = string.format('      %3s', alu)
+  end
+
+  local jmp = {'JGT', 'JEQ', 'JGE', 'JLT', 'JNE', 'JLE', 'JMP'}
+  jmp = jmp[(op.lt and 4 or 0) + (op.eq and 2 or 0) + (op.gt and 1 or 0)]
+
+  local sep = jmp and '⯈' or '┊'
+
+  return asm,sep,jmp or ''
+end
+
+local function load_op_to_str(opcode)
+  local sep,char = '┊',''
+  if opcode >= 0x20 and opcode <= 0x7e then
+    -- Annotate with printable ASCII character, if any
+    sep = '◁'
+    char = string.format('\\%c', opcode)
+  end
+  return '@ '..opcode, sep, char
+end
+
+-- Turn an opcode into a human-readable string.
+local function op_str(op)
+  if op.is_nop then
+    return string.format('%04X ┋ %-9s ┊ %3s', op.opcode, 'nop', '')
+  elseif not op.ci then
+    return string.format('%04X ┋ %-9s %s %-3s', op.opcode, load_op_to_str(op.opcode))
+  else
+    return string.format('%04X ┋ %-9s %s %-3s', op.opcode, compute_op_to_str(op))
+  end
+end
+
+local function sym_annotations(self, op)
+  if op.ci then return '' end
+  local syms = self:to_symbols(op.opcode)
+  if not syms then return '' end
+  local buf = { ' ⧏' }
+  for sym,info in pairs(syms) do
+    if info.type ~= 'macro' then
+      table.insert(buf, sym)
+    end
+  end
+  if #buf > 1 then
+    return table.concat(buf, ' ')
+  else
+    return ''
+  end
+end
+
+-- Return a human-readable string describing the given opcode.
+-- If labels is false, returns a fixed-width (15 cols, 16 bytes) format
+-- containing the disassembly. Load instructions in the ASCII printable range
+-- are annotated with the corresponding character.
+-- If symbols is true, load instructions are additionally annotated with any
+-- symbol names that hold that value.
+function vmdebug:op_to_string(op, symbols)
+  op.str = op.str or op_str(op)
+  if symbols and #self.symbols > 0 then
+    op.symbols = op.symbols or sym_annotations(self, op)
+    return op.str .. op.symbols
+  else
+    return op.str
+  end
+end
+
 return vmdebug

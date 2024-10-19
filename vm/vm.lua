@@ -145,8 +145,9 @@ function vm:__tostring()
   -- we use self.ram here rather than ram_read() because if A is pointing to
   -- an MMIO device we don't want to actuate it while printing the VM state!
   local source = self.debug:pc_to_label(self.PPC)
+  local op = vmutil.decode(self.IR)
   return string.format("VM (PC:%04X IR:%-20s CLK:%04X D:%04X A:%04X MEM:%04X NEXT:%04X %s%s)",
-    self.PPC, vmutil.decode(self.IR),
+    self.PPC, self.debug:op_to_string(op),
     self.CLK, self.D, self.A, self.ram[self.A] or 0xFFFF, self.PC,
     source and '@ ' or '', source or '')
 end

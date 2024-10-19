@@ -194,7 +194,7 @@ commands['break'].fn = function(CPU, address)
       if enabled then
         local op = vmutil.decode(CPU.rom[addr])
         printf('%04X - $%-32s %s\n',
-          addr, tostring(op), CPU.debug:pc_to_label(addr))
+          addr, CPU.debug:op_to_string(op), CPU.debug:pc_to_label(addr))
       end
     end
   end
@@ -322,7 +322,7 @@ function commands.list.fn(CPU, address, size)
       if addr ~= address and to_ret then break end
       printf('\n%04X         %s\n', addr, info)
     elseif not info.is_nop then
-      printf('%04X - $%-32s\n', addr, tostring(info))
+      printf('%04X - $%-32s\n', addr, CPU.debug:op_to_string(info, true))
     end
   end
 end
