@@ -130,7 +130,7 @@ function vmdebug:disassemble(base, size)
       if not src:match('%+%d+$') then
         coroutine.yield(addr, 'label', src)
       end
-      local op = vmutil.decode(word)
+      local op = self.cpu:decode(addr)
       coroutine.yield(addr, 'op', op)
     end
     return nil

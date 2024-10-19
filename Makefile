@@ -1,4 +1,4 @@
-next: next/ngasm.hex
+next: next/ngasm.next.next.hex
 
 clean:
 	rm next/*

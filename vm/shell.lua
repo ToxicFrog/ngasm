@@ -192,7 +192,7 @@ commands['break'].fn = function(CPU, address)
   else
     for addr,enabled in pairs(CPU.debug.breakpoints) do
       if enabled then
-        local op = vmutil.decode(CPU.rom[addr])
+        local op = CPU:decode(addr)
         printf('%04X - $%-32s %s\n',
           addr, CPU.debug:op_to_string(op), CPU.debug:pc_to_label(addr))
       end

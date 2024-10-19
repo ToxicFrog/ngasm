@@ -23,6 +23,7 @@ function vm.new()
     -- contents.
     ram = {};
     rom = {};
+    icache = {};
     -- peripherals
     dev = {};
   }
@@ -57,6 +58,7 @@ function vm:flash(rom)
     self.rom = vmutil.string_to_words(rom)
   end
   self.rom.size = #self.rom+1
+  self.icache = {}
   self.debug:reset()
   return self
 end
@@ -66,10 +68,19 @@ function vm:run(n)
   return self:trace(n, function() end)
 end
 
+-- Decode a single instruction, from icache if possible.
+function vm:decode(addr)
+  if not self.icache[addr] then
+    self.icache[addr] = vmutil.decode(self.rom[addr])
+  end
+  return self.icache[addr]
+end
+
 function vm:trace(n, trace_fn)
   local start = true -- skip breakpoint on the same instruction we resume on
   trace_fn = trace_fn or function(vm)
-    if not vmutil.decode(vm.IR).is_nop then print(vm) end
+    local op = vm:decode(vm.PPC)
+    if not op.is_nop then print(vm) end
   end
   n = n or math.huge
   for i=1,n do
@@ -99,7 +110,7 @@ function vm:step()
   self.PPC,self.PC = self.PC,self.PC+1
 
   -- decode instruction. If load immediate, we just handle it here.
-  local op = vmutil.decode(self.IR)
+  local op = self:decode(self.PPC)
   if not op.ci then
     self.A = op.opcode
   else
