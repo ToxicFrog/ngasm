@@ -185,7 +185,7 @@ command 'break' '[addr]' 'Set or remove a breakpoint' [[
 ]]
 commands['break'].fn = function(CPU, address)
   if address then
-    address = CPU.debug:to_address(address)
+    address = CPU.debug:to_address(address, 'rom')
     local set = CPU.debug:toggle_breakpoint(address)
     eprintf('%s breakpoint at address $%04X\n',
       set and "Added" or "Removed", address)
@@ -254,7 +254,7 @@ command 'watch' '[address]' 'Watch for changes to a memory address' [[
 ]]
 function commands.watch.fn(CPU, address)
   if address then
-    address = CPU.debug:to_address(address)
+    address = CPU.debug:to_address(address, 'ram')
     local set = CPU.debug:toggle_watch(address)
     eprintf('%s watch on RAM address $%04X\n',
       set and "Added" or "Removed", address)
@@ -313,7 +313,7 @@ command 'list' '[address] [size]' 'Disassemble the loaded ROM' [[
   will additionally get their own lines.
 ]]
 function commands.list.fn(CPU, address, size)
-  address = CPU.debug:to_address(address or 'pc')
+  address = CPU.debug:to_address(address or 'pc', 'rom')
   local to_ret = not size or size == 'this'
   size = tonumber(size) or math.huge
 

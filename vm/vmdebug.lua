@@ -51,6 +51,7 @@ local function bind(self, id, name, line)
       sym.name = name
       sym.line = line
       sym.type = symbol_types[name:sub(1,1)] or '???'
+      self.symbols[name] = sym -- fast name-to-symbol lookup
     end
   end
 end
@@ -136,13 +137,40 @@ function vmdebug:disassemble(base, size)
   end)
 end
 
--- TODO: support mapping symbols to addresses
+-- Resolve a symbol. A + or - suffix offsets the symbol by that much.
+-- Returns the resolved value (or nil).
+-- As a second return value, returns the type of symbol:
+-- - 'rom' for code labels
+-- - 'ram' for variable names
+-- - 'constant' for compile-time constants
+-- - 'macro' for compile-time macros
+-- The desired type may be specified as a second argument, in which case it
+-- will refuse to resolve if the type doesn't match.
+function vmdebug:resolve(symbol, type)
+  local offset = 0
+  if symbol:match('[+-][0-9]+$') then
+    symbol,offset = symbol:match('(.*)([+-][0-9]+)$')
+    offset = tonumber(offset)
+  end
+  local info = self.symbols[symbol]
+  if not info then
+    return nil,string.format("no entry for '%s' in symbol table", symbol)
+  end
+  if type and info.type ~= type then
+    return nil,string.format(
+      "symbol '%s' with value %04X has type '%s', but a value of type '%s' is required",
+      symbol, info.value, info.type, type)
+  end
+  return info.value, info.type
+end
+
 -- TODO: implement to_symbol()
 local registers = { A = true; D = true; IR = true; PC = true; }
-function vmdebug:to_address(str)
+function vmdebug:to_address(str, type)
   if registers[str:upper()] then return self.cpu[str:upper()] end
   str = str:gsub('^%$', '0x')
-  return assert(tonumber(str), 'invalid address: '..str)
+  if tonumber(str) then return tonumber(str) end
+  return assert(self:resolve(str, type))
 end
 
 return vmdebug
