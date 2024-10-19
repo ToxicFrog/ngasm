@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+#
+# Run all compiler test cases.
+
+LUA=${LUA:=luajit}
+ROM=${ROM:=next/ngasm.next.next.bin}
+SRC=${SRC:=next/ngasm.asm}
+
+export LUA_PATH="vm/?.lua;;"
+
+declare -a args=()
+for suite in tests/*.lua; do
+  if [[ $suite != 'testlib.lua' ]]; then
+    args+=($suite)
+  fi
+done
+
+$LUA "tests/testlib.lua" "$ROM" "$SRC" $(ls tests/*.lua | egrep '\.lua$' | egrep -v 'testlib.lua' | sort)
