@@ -40,9 +40,17 @@ function Test:error(err)
   table.insert(lines, string.format(unpack(err)))
   if err.expected then
     table.insert(lines, string.format('%9s: %s', 'Expected', rom_str(err.expected)))
-    table.insert(lines, string.format('%9s: %s', 'Got', rom_str(err.rom)))
+    table.insert(lines, string.format('%9s: %s', 'Got', rom_str(err.actual)))
   end
   table.insert(self.errors, table.concat(lines, '\n'))
+end
+
+function Test:error_if(condition)
+  if not condition then
+    return function() end
+  else
+    return function(...) return self:error(...) end
+  end
 end
 
 function Test:check_error(line, pass)
@@ -74,33 +82,27 @@ function Test:check_rom(addr, value, ...)
   if not value then
     -- check entire ROM
     local bin = vmutil.hex2bin(addr)
-    if bin ~= self.rom then
-      self:error {
-        'Emitted ROM does not match expected image:';
-        expected = bin, rom = self.rom;
-      }
-    end
+    self:error_if(bin ~= self.rom) {
+      'Emitted ROM does not match expected image:';
+      expected = bin, actual = self.rom;
+    }
     return self:check_rom(value, ...)
   elseif addr == '*' then
     -- check if value appears anywhere in ROM
     local bin = vmutil.hex2bin(value)
-    if not self.rom:match(bin, 1, true) then
-      self:error {
-        'Emitted ROM does not contain expected code:';
-        expected = bin, rom = self.rom;
-      }
-    end
+    self:error_if(not self.rom:match(bin, 1, true)) {
+      'Emitted ROM does not contain expected code:';
+      expected = bin, actual = self.rom;
+    }
     return self:check_rom(...)
   else
     -- check if value appears at specified address
     addr = tonumber(addr)
     local bin = vmutil.hex2bin(value)
-    if self.rom:match(bin, addr, true) ~= addr then
-      self:error {
-        'Emitted ROM does not contain expected code at address $%04X:', addr;
-        expected = bin, rom = self.rom:sub(addr, addr+#bin-1);
-      }
-    end
+    self:error_if(self.rom:match(bin, addr, true) ~= addr) {
+      'Emitted ROM does not contain expected code at address $%04X:', addr;
+      expected = bin, actual = self.rom:sub(addr, addr+#bin-1);
+    }
     return self:check_rom(...)
   end
 end
@@ -116,17 +118,18 @@ local function run_test_case(cpu, tests, name, fn)
   fn(test)
   tests.after(test)
   if #test.errors > 0 then
-    for _,err in ipairs(test.errors) do
-      -- print(err)
-    end
     printf('\x1B[1;31m FAIL \x1B[0m]\n')
+    for _,err in ipairs(test.errors) do
+      print(err)
+    end
+    print()
     return false
   end
   printf('\x1B[1;32m PASS \x1B[0m]\n')
   return true
 end
 
-function run_test_suite(cpu, file)
+local function run_test_suite(cpu, file)
   local ignore = { name = true; before = true; after = true; }
   local tests = {
     name = file:gsub('%.lua$','');
@@ -147,7 +150,7 @@ end
 
 local function main(compiler_rom, compiler_src, ...)
   local cpu = vm.new()
-  cpu:flash(io.open(compiler_rom, 'rb'):read('*a'))
+  cpu:flash(assert(io.open(compiler_rom, 'rb')):read('*a'))
   cpu.debug:source(compiler_src)
 
   for _,file in ipairs {...} do
