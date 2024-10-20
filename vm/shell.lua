@@ -136,7 +136,7 @@ command 'source' '</path/to/source.asm>' 'Load source code for debugging' [[
   in the ROM.
 ]]
 function commands.source.fn(CPU, path)
-  CPU.debug:source(path)
+  CPU.debug:source_file(path)
   local nlabels = 0
   for _,sym in ipairs(CPU.debug.symbols) do
     if sym.name then nlabels = nlabels + 1 end

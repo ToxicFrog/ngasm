@@ -56,13 +56,10 @@ local function bind(self, id, name, line)
   end
 end
 
--- Load the given file as the source code for the loaded ROM, and attempt to
--- match up entries in the symbol table with declarations in the source.
--- This will be used to display labels for commands like list, trace, and symbols.
-function vmdebug:source(source)
+function vmdebug:source_iter(...)
   self:load_symbols()
   local n = 0
-  for line in io.lines(source) do
+  for line in ... do
     n = n+1
     if line:match('^%s*[:%[&#].*') then
       local label = line:gsub('%s', ''):gsub('[;=].*', '')
@@ -71,6 +68,18 @@ function vmdebug:source(source)
   end
   -- Re-sort the symbol table using the new name and type information.
   table.sort(self.symbols, sort_syms)
+end
+
+-- Load the given string as the source code for the loaded ROM, and attempt to
+-- match up entries in the symbol table with declarations in the source.
+-- This will be used to display labels for commands like list, trace, and symbols.
+function vmdebug:source(source)
+  return self:source_iter(source:gmatch('[^\n]*'))
+end
+
+-- As source(), but reads the source code from disk.
+function vmdebug:source_file(source)
+  return self:source_iter(io.lines(source))
 end
 
 function vmdebug:load_symbols()
@@ -127,7 +136,7 @@ function vmdebug:disassemble(base, size)
     for addr=base,eof do
       local word = self.cpu.rom[addr]
       local src = self:pc_to_label(addr)
-      if not src:match('%+%d+$') then
+      if src and not src:match('%+%d+$') then
         coroutine.yield(addr, 'label', src)
       end
       local op = self.cpu:decode(addr)
