@@ -16,14 +16,33 @@ local function rom_str(bin)
   return table.concat(buf, ' ')
 end
 
+local function ram_str(ram, start, size)
+  start = start or 1
+  size = #ram
+  local buf = {}
+  for i=start,start+size-1 do
+    table.insert(buf, string.format('%04X', ram[i] or 0))
+  end
+  return table.concat(buf, ' ')
+end
+
 local Test = {}
 Test.__index = Test
 
 function Test.new(compiler)
-  return setmetatable({ compiler = compiler, errors = {} }, Test)
+  return setmetatable({
+    compiler = compiler;
+    errors = {};
+    use_headers = true;
+  }, Test)
 end
 
 function Test:source(src)
+  if self.use_headers then
+    local prelude = assert(io.open('next/prelude.asm')):read('*a')
+    local postscript = assert(io.open('next/postscript.asm')):read('*a')
+    src = prelude .. src .. postscript
+  end
   local bin = memstream.new('')
   self.compiler:reset()
   self.compiler:attach(0x7FF0, memstream.new(src))
@@ -32,6 +51,7 @@ function Test:source(src)
   self.compiler:detach(0x7FF0)
   self.compiler:detach(0x7FF8)
   self.rom = bin.buf
+  self.src = src
   -- print('compilation complete, bytes emitted:', #self.rom)
 end
 
@@ -42,7 +62,14 @@ function Test:error(err)
     table.insert(lines, string.format('%9s: %s', 'Expected', rom_str(err.expected)))
     table.insert(lines, string.format('%9s: %s', 'Got', rom_str(err.actual)))
   end
-  table.insert(self.errors, table.concat(lines, '\n'))
+  if err.src then
+    table.insert(lines, 'Failing source code:')
+    table.insert(lines, err.src)
+  end
+  for i=1,#lines do
+    lines[i] = '\x1B[1;31m║\x1B[0m '..lines[i]
+  end
+table.insert(self.errors, table.concat(lines, '\n'))
 end
 
 function Test:error_if(condition)
@@ -66,7 +93,8 @@ function Test:check_valid_rom()
       }
       self:error {
         'Build failed on pass %d at line %d',
-        self.build_error.pass, self.build_error.line
+        self.build_error.pass, self.build_error.line,
+        src = self.src
       }
     else
       self.build_error = false
@@ -97,7 +125,7 @@ function Test:check_rom(addr, value, ...)
     return self:check_rom(...)
   else
     -- check if value appears at specified address
-    addr = tonumber(addr)
+    addr = self.cpu.debug:to_address(addr, 'rom')
     local bin = vmutil.hex2bin(value)
     self:error_if(self.rom:match(bin, addr, true) ~= addr) {
       'Emitted ROM does not contain expected code at address $%04X:', addr;
@@ -107,7 +135,51 @@ function Test:check_rom(addr, value, ...)
   end
 end
 
-function Test:check_ram(hex)
+function Test:run_test_rom()
+  if not self.cpu then
+    local cpu = vm.new()
+    cpu:flash(self.rom)
+    cpu.debug:source(self.src)
+    cpu:reset()
+    cpu:run()
+    self.cpu = cpu
+  end
+  return true
+end
+
+local function diff_region(ram, addr, expected)
+  for i=0,#expected-1 do
+    if ram[addr+i] ~= expected[i+1] then
+      return true
+    end
+  end
+  return false
+end
+
+function Test:check_ram(addr, value, ...)
+  if not addr then return nil end
+  if not self:check_valid_rom() then return end
+  if not self:run_test_rom() then return end
+
+  local true_addr = self.cpu.debug:to_address(addr, 'ram')
+  if type(value) == 'number' then
+    self:error_if(self.cpu.ram[true_addr] ~= value) {
+      'RAM at $%04X%s has wrong value %04X (≠ %04X)',
+      true_addr, addr ~= true_addr and ' ('..addr..')' or '',
+      self.cpu.ram[true_addr], value
+    }
+  elseif type(value) == 'table' then
+    self.error_if(diff_region(self.cpu.ram, true_addr, value)) {
+      'RAM at address $%04X%s does not match expected values',
+      true_addr, addr ~= true_addr and ' ('..addr..')' or '';
+      expected = ram_str(value);
+      got = ram_str(self.cpu.ram, true_addr, #value);
+    }
+  else
+    -- TODO: automatic string to ram conversion
+    error()
+  end
+  return self:check_ram(...)
 end
 
 local function run_test_case(cpu, tests, name, fn)
@@ -118,11 +190,11 @@ local function run_test_case(cpu, tests, name, fn)
   fn(test)
   tests.after(test)
   if #test.errors > 0 then
-    printf('\x1B[1;31m FAIL \x1B[0m]\n')
+    printf('\x1B[1;31m FAIL \x1B[0m]\r\x1B[1;31m╓──╼\x1B[0m\n')
     for _,err in ipairs(test.errors) do
       print(err)
     end
-    print()
+    print('\x1B[1;31m╙──╼\x1B[0m ')
     return false
   end
   printf('\x1B[1;32m PASS \x1B[0m]\n')
@@ -138,14 +210,18 @@ local function run_test_suite(cpu, file)
   }
   local total,passed = 0,0
 
+  local names = {}
   assert(loadfile(file))(tests)
-  for k,v in pairs(tests) do
+  for k in pairs(tests) do
     if not ignore[k] then
-      total = total + 1
-      passed = passed + (run_test_case(cpu, tests, k, v) and 1 or 0)
+      table.insert(names, k)
     end
   end
-  return passed,total
+  table.sort(names)
+  for _,name in ipairs(names) do
+    passed = passed + (run_test_case(cpu, tests, name, tests[name]) and 1 or 0)
+  end
+  return passed,#names
 end
 
 local function main(compiler_rom, compiler_src, ...)
@@ -154,10 +230,10 @@ local function main(compiler_rom, compiler_src, ...)
   cpu.debug:source(compiler_src)
 
   for _,file in ipairs {...} do
-    printf('  %-24s\n', file)
+    printf('  \x1B[4m%s\x1B[0m\n', file)
     local passed,total = run_test_suite(cpu, file)
     printf('  %-24s [ %s%2d/%-2d%s]\n',
-      file,
+      '',
       passed == total and '\x1B[1;32m' or '\x1B[1;31m',
       passed, total, '\x1B[0m')
   end

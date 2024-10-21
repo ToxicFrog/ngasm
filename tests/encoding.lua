@@ -1,6 +1,7 @@
 local tests = ...
 
 function tests.load_immediate(test)
+  test.use_headers = false
   test:source [[
     @ 0
     @ $1234
@@ -13,6 +14,7 @@ function tests.load_immediate(test)
 end
 
 function tests.jump(test)
+  test.use_headers = false
   test:source [[
     = 0|D <=>
     = 0|A <=
@@ -28,6 +30,7 @@ function tests.jump(test)
 end
 
 function tests.assign(test)
+  test.use_headers = false
   test:source [[
     = 0+1
     A = 0+1
@@ -43,6 +46,7 @@ function tests.assign(test)
 end
 
 function tests.alu(test)
+  test.use_headers = false
   test:source [[
     = D+A
     = D+1

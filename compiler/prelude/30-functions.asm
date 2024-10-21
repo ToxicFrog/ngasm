@@ -29,6 +29,13 @@
   M = 0|D
 ]
 
+; ~storea,address
+; Stores the value in A at the given address. Overwrites A and D.
+[storea
+  D = 0|A
+  ~stored, %0
+]
+
 ; ~storec,value,address
 ; Stores a constant value at the given address. Overwrites both registers.
 [storec

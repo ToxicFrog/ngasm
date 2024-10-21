@@ -180,11 +180,15 @@ end
 -- checking, e.g. a request for a 'rom' address will not resolve if the symbol
 -- table entry is of type 'ram'.
 local registers = { A = true; D = true; IR = true; PC = true; }
-function vmdebug:to_address(str, type)
+function vmdebug:to_address(str, kind)
+  -- If it's already a numeric address just return it.
+  if type(str) == 'number' then return str end
+  -- Registers can be referred to by name.
   if registers[str:upper()] then return self.cpu[str:upper()] end
+  -- Attempt symbol resolution.
   str = str:gsub('^%$', '0x')
   if tonumber(str) then return tonumber(str) end
-  return assert(self:resolve(str, type))
+  return assert(self:resolve(str, kind))
 end
 
 -- Turn an address into the set of symbols with that value.
