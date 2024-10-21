@@ -49,6 +49,7 @@ function tests.pop(test)
     &first = $100
     &second = $101
     &third = $102
+    &fourth = $103
 
     :Init
     ~stack/init, $1000
@@ -60,13 +61,17 @@ function tests.pop(test)
     ~pushconst, 33
     ~popa
     ~storea, &third
+    ~pushconst, 44
+    @ &fourth
+    ~popm
   ]]
 
   test:check_ram(
     '&SP', 0x1000,
     '&first', 11,
     '&second', 22,
-    '&third', 33
+    '&third', 33,
+    '&fourth', 44
   )
 end
 

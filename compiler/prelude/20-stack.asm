@@ -75,10 +75,21 @@
 ; popm ( M -- )
 ; pops the value on top of the stack into the memory address currently pointed
 ; to by A.
-; How do I implement this? I can save A into D and then use A to decrement SP,
-; at which point D contains the address we want to store to and *SP is the
-; value we want to store, but we need to end up with the value in D and the
-; address in A. I may need to temporarily hijack the top of the stack.
+; Fairly slow since we need to spill the address to RAM to make room for the
+; data before reading the address back in.
+[popm
+  D = 0|A
+  @ &SP
+  A = 0|M
+  M = 0|D ; store destination address atop the stack
+  A = A-1
+  D = 0|M ; read value into D
+  A = A+1
+  A = 0|M ; read address into A
+  M = 0|D ; write value
+  @ &SP
+  M = M-1 ; decrement stack pointer
+]
 
 ; popvar,addr ( M -- )
 ; pops the value on top of the stack into the named memory location.
