@@ -47,16 +47,14 @@
 ; If we're on the second pass, do nothing here; the name of the macro is already
 ; in the symbol table and code generation will emit a no-op.
 ~loadd, &core/pass
-@ :EndOfLine_Continue
-= 0|D <>
-; Otherwise we need to bind it. Set the continuation to EndOfLine_Continue,
-; which is conveniently already in A.
-D = 0|A
-~stored, &sym/next
-; Now set the value to the current file offset.
-~loadd, &core/fseek
-~stored, &sym/value
-~jmp, :Sym_Bind
+~jnz, :EndOfLine_Continue
+; Otherwise we need to bind it.
+; Set the value to the current file offset. sym/name already holds the nameid.
+~pushvar, &core/fseek
+~pushvar, &sym/name
+~call, :Sym_Bind, 2
+~drop
+~jmp, :EndOfLine_Continue
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Macro_End

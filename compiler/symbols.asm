@@ -121,53 +121,37 @@ D = D+M
 ;
 ; This is not a parser state; you call it and it does its work and then immediately
 ; calls *sym_next.
-  :Sym_Bind
-; last_sym should already be pointing to the free slot at the end of the symbol
-; table, so write the hash to it
-~loadd, &sym/name ; D = symbol
-@ &sym/last
-A = 0|M
-M = 0|D ; *last_sym = D
-; increment last_sym so it points to the value slot
-@ &sym/last
-M = M+1
-; write the value we were given to that slot
-~loadd, &sym/value
-@ &sym/last
-A = 0|M
-M = 0|D
-; increment last_sym again so it points to the next, unused slot
-@ &sym/last
-M = M+1
-; call sym_next
-@ &sym/next
-A = 0|M
-= 0|D <=>
+  :Sym_Bind ; ( value nameid -- nil )
+~function, 2
+  ; last_sym should already be pointing to the free slot at the end of the symbol
+  ; table, so write the nameid to it
+  ~loadarg, 1
+  @ &sym/last
+  A = 0|M
+  M = 0|D ; *last_sym = D
+  ; increment last_sym so it points to the value slot
+  @ &sym/last
+  M = M+1
+  ; write the value we were given to that slot
+  ~loadarg, 0
+  @ &sym/last
+  A = 0|M
+  M = 0|D
+  ; increment last_sym again so it points to the next, unused slot
+  @ &sym/last
+  M = M+1
+  ~pushconst, 0
+  ~return
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Sym_Resolve                                                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Called by the second-pass compiler (and once we have macros, the first-pass as
-; well) when resolving a symbol. It expects the symbol hash in sym/name and will
-; leave the value in sym/value. If the symbol cannot be resolved it jumps to Error.
-;
-; Like Sym_Bind it is not a state; you call it and it does its work immediately
-; and then calls sym_next.
-;
-; A common pattern is going to be something like:
-;   :MyState
-;   [if we are reading a symbol:]
-;   [put MyState_Resolve in sym_next]
-;   @ :Sym_Read
-;   JMP
-;   :MyState_Resolve
-;   [put MyState_ResolveDone in sym_next]
-;   @ :Sym_Resolve
-;   JMP
-;   :MyState_ResolveDone
-;   [code to do something with the resolved value]
-  :Sym_Resolve
+; well) when resolving a symbol. It expects the symbol nameid as its first and
+; only argument, and returns the associated value.
+; If the symbol cannot be resolved it jumps to Error.
+  :Sym_Resolve ; ( nameid -- value )
 ~function, 0
   ; Startup code - set this_sym = &symbols
   ~storec, :&symbols., &sym/this
@@ -217,7 +201,7 @@ A = 0|M
 
 ; Called at the end of the program, after successfully writing a ROM image.
 ; Dumps the symbol table to stdout in a debugger-friendly format.
-  :Sym_Dump
+  :Sym_Dump ; ( -- )
 ~function, 1 ; one local for the iterator
   ~pushconst, :&symbols.
   ~poplocal, 0

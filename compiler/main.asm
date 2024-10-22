@@ -280,12 +280,11 @@ M = M+1
 ;   once we're done
 ; - copy PC into sym_value and then call Sym_Bind.
   :BindPC
-; set up sym_next
-~storec, :EndOfLine_Continue, &sym/next
-; set up PC
-~loadd, &core/pc
-~stored, &sym/value
-~jmp, :Sym_Bind
+~pushvar, &core/pc
+~pushvar, &sym/name
+~call, :Sym_Bind, 2
+~drop
+~jmp, :EndofLine_Continue
 
 ; Called when the line starts with & or #, denoting a constant definition.
 ; We need to call Sym_Read to read the symbol hash into &symbol, then Val_Read
@@ -306,10 +305,11 @@ M = M+1
 
 ; sym_value = value; sym_next = EndOfLine_Continue; jmp Sym_Bind
   :LineStart_Constant_Bind
-~loadd, &val/value
-~stored, &sym/value
-~storec, :EndOfLine_Continue, &sym/next
-~jmp, :Sym_Bind
+~pushvar, &val/value
+~pushvar, &sym/name
+~call, :Sym_Bind, 2
+~drop
+~jmp, :EndOfLine_Continue
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Destination state                                                          ;;
