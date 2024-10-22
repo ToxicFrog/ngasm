@@ -327,4 +327,18 @@ function commands.list.fn(CPU, address, size)
   end
 end
 
+command 'peek' 'address [size]' 'Display memory' [[
+  Displays the contents of RAM.
+
+  With no size, displays the word at the given address. With size, displays the
+  [size] words starting at the given address.
+]]
+function commands.peek.fn(CPU, address, size)
+  size = size or 1
+  address = CPU.debug:to_address(address, 'ram')
+  for i=0,size-1 do
+    printf('%04X - $%04X\n', address+i, CPU.ram[address+i])
+  end
+end
+
 return { main=main }
