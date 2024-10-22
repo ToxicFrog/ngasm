@@ -285,9 +285,9 @@ command 'symbols' '' 'List the contents of the symbol table' [[
 ]]
 function commands.symbols.fn(CPU)
   -- TODO: include line number information where available
-  printf(' \x1b[4m%-4s ┊ %-5s ┊ %-9s ┊ %s\x1b[0m\n', 'Line', 'ID', 'Value', 'Name')
+  printf(' \x1b[4m%-4s ┊ %-4s ┊ %-9s ┊ %s\x1b[0m\n', 'Line', 'ID', 'Value', 'Name')
   for _,sym in ipairs(CPU.debug.symbols) do
-    printf(' %4d ┊ %5d ┊ %9s ┊ %s\n', sym.line, sym.id, sym_value(sym), sym.name or '')
+    printf(' %4d ┊ %04X ┊ %9s ┊ %s\n', sym.line, sym.id, sym_value(sym), sym.name or '')
   end
 end
 
