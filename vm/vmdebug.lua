@@ -121,7 +121,8 @@ end
 function vmdebug:check_watches()
   for addr,val in pairs(self.watches) do
     if self.cpu.ram[addr] ~= val then
-      print(self)
+      print(self.cpu)
+      print(string.format('[watch] %04X - $%04X <- $%04X', addr, self.cpu.ram[addr], val))
       self.watches[addr] = self.cpu.ram[addr]
     end
   end
