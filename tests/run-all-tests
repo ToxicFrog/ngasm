@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 #
 # Run all compiler test cases.
+# Call with arguments: stable-rom stable-src next-rom next-src
 
 LUA=${LUA:=luajit}
-ROM=${ROM:=next/ngasm.next.next.bin}
-SRC=${SRC:=next/ngasm.asm}
 
 export LUA_PATH="vm/?.lua;;"
 
@@ -15,4 +14,4 @@ for suite in tests/*.lua; do
   fi
 done
 
-$LUA "tests/testlib.lua" "$ROM" "$SRC" $(ls tests/*.lua | egrep '\.lua$' | egrep -v 'testlib.lua' | sort)
+$LUA "tests/testlib.lua" "$@" $(ls tests/*.lua | egrep '\.lua$' | egrep -v 'testlib.lua' | sort)

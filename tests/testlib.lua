@@ -182,33 +182,42 @@ function Test:check_ram(addr, value, ...)
   return self:check_ram(...)
 end
 
-local function run_test_case(cpu, tests, name, fn)
+local function run_test_case_on_cpu(cpu, tests, name, fn)
   local test = Test.new(cpu)
 
-  printf('    %-22s [', name)
+  printf(' [')
   tests.before(test)
   fn(test)
   tests.after(test)
   if #test.errors > 0 then
-    printf('\x1B[1;31m FAIL \x1B[0m]\r\x1B[1;31m╓──╼\x1B[0m\n')
+    printf('\x1B[1;31m FAIL \x1B[0m]\r\x1B[1;31m╓──╼\x1B[0m')
+    -- FIXME: this is all spiders with the new dual-cpu code
     for _,err in ipairs(test.errors) do
       print(err)
     end
     print('\x1B[1;31m╙──╼\x1B[0m ')
     return false
   end
-  printf('\x1B[1;32m PASS \x1B[0m]\n')
+  printf('\x1B[1;32m PASS \x1B[0m]')
   return true
 end
 
-local function run_test_suite(cpu, file)
+local function run_test_case(stable, next, tests, name, fn)
+  printf('    %-22s', name)
+
+  return run_test_case_on_cpu(stable, tests, name, fn),
+    run_test_case_on_cpu(next, tests, name, fn),
+    printf('\n')
+end
+
+local function run_test_suite(stable, next, file)
   local ignore = { name = true; before = true; after = true; }
   local tests = {
     name = file:gsub('%.lua$','');
     before = function() end;
     after = function() end;
   }
-  local total,passed = 0,0
+  local spassed,npassed = 0,0
 
   local names = {}
   assert(loadfile(file))(tests)
@@ -219,23 +228,30 @@ local function run_test_suite(cpu, file)
   end
   table.sort(names)
   for _,name in ipairs(names) do
-    passed = passed + (run_test_case(cpu, tests, name, tests[name]) and 1 or 0)
+    local sp,np = run_test_case(stable, next, tests, name, tests[name])
+    spassed = spassed + (sp and 1 or 0)
+    npassed = npassed + (np and 1 or 0)
   end
-  return passed,#names
+  return spassed,npassed,#names
 end
 
-local function main(compiler_rom, compiler_src, ...)
-  local cpu = vm.new()
-  cpu:flash(assert(io.open(compiler_rom, 'rb')):read('*a'))
-  cpu.debug:source(compiler_src)
+local function main(stable_rom, stable_src, next_rom, next_src, ...)
+  local stable = vm.new()
+  stable:flash(assert(io.open(stable_rom, 'rb')):read('*a'))
+  stable.debug:source(stable_src)
+  local next = vm.new()
+  next:flash(assert(io.open(next_rom, 'rb')):read('*a'))
+  next.debug:source(next_src)
 
   for _,file in ipairs {...} do
     printf('  \x1B[4m%s\x1B[0m\n', file)
-    local passed,total = run_test_suite(cpu, file)
-    printf('  %-24s [ %s%2d/%-2d%s]\n',
+    local spassed,npassed,total = run_test_suite(stable, next, file)
+    printf('  %-24s [ %s%2d/%-2d%s] [ %s%2d/%-2d%s]\n',
       '',
-      passed == total and '\x1B[1;32m' or '\x1B[1;31m',
-      passed, total, '\x1B[0m')
+      spassed == total and '\x1B[1;32m' or '\x1B[1;31m',
+      spassed, total, '\x1B[0m',
+      npassed == total and '\x1B[1;32m' or '\x1B[1;31m',
+      npassed, total, '\x1B[0m')
   end
 end
 

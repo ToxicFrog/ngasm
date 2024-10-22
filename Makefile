@@ -36,8 +36,8 @@ debug: next/ngasm.stable.next.hex
 	@echo "Entering debugger."
 	ROM=next/ngasm.stable.next.hex SRC=next/ngasm.asm rlwrap ./ngasm next/ngasm.asm /dev/null info shell
 
-test: next/ngasm.stable.next.bin
+test: next/ngasm.stable.next.bin next/ngasm.next.next.bin
 	@echo "Running unit tests."
-	ROM=$< tests/run-all-tests
+	tests/run-all-tests next/ngasm.stable.next.bin next/ngasm.asm next/ngasm.next.next.bin next/ngasm.asm
 
 .PHONY: next clean debug test
