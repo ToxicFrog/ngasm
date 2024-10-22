@@ -1,7 +1,40 @@
-Debug information!
-At the very end of the file, write:
-  @ $7FFF
-  = 0|D <=>
-Followed by the contents of the symbol table, then the number of ST entries.
-Then a debugger can read the source code to build a matching symbol that maps
-symbol to hash.
+$4000   036a ; symbol value
+$4001   05ca ; nameid
+$4002   old args
+$4003   old locals
+$4004   ra
+$4005   <empty> <- locals
+$4006   <empty>
+$4007   <- sp
+
+$0AEE   05Ca  nameid  <- :&symbols.
+$0AEF   036a  fp offset
+
+;; pre/post increment
+postincrement has faster pop, preincrement has faster push
+push is probably slightly more common because sometimes you drop, rather than popping
+
+
+;; postincrement
+; push
+@ &SP     ; A points to SP
+AM = M+1  ; inc SP, store, read into A -- A points to slot past target
+A = A-1   ; A points to target
+M = D     ; write
+
+; pop
+@ &SP
+AM = M-1
+D/A = M
+
+;; preincrement
+; push
+@ &SP
+AM = M+1
+M = D
+
+; pop
+@ &SP
+AM = M-1
+A = A+1
+D/A = M
