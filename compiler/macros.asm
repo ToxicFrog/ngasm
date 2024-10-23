@@ -52,8 +52,7 @@
 ; Set the value to the current file offset. sym/name already holds the nameid.
 ~pushvar, &core/fseek
 ~pushvar, &sym/name
-~call, :Sym_Bind, 2
-~drop
+~call, :Sym_Bind
 ~jmp, :EndOfLine_Continue
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -105,7 +104,7 @@ M = M-D
 ; Called after reading in the macro name.
   :Macro_Expand_Resolve
 ~pushvar, &sym/name
-~call, :Sym_Resolve, 1
+~call, :Sym_Resolve
 ~popvar, &macros/address
 ; We need to set the in_macroexpansion flag and seek back to that point
 ; in the input file, which will cause the contents of the macro to be assembled

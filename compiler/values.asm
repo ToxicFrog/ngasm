@@ -83,7 +83,7 @@ M = 0&D
 ; associated value. &sym/name holds the namehash of the symbol.
   :Val_Read_SymDone
 ~pushvar, &sym/name
-~call, :Sym_Resolve, 1
+~call, :Sym_Resolve
 ~popvar, &val/value
 @ &val/next
 A = 0|M

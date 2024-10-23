@@ -6,11 +6,21 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 &SP = 0
+; ARGS, LOCALS, and RETVAL are in 1, 2 and 3 for nandgame compatibility
+&RSP = 4
 
+; Initialize the stack.
+; First argument is the base address of the data stack.
+; Second is the base address of the call stack, which needs one word per nested
+; function call.
 [stack/init
   @ %0
   D = 0|A
   @ &SP
+  M = 0|D
+  @ %1
+  D = 0|A
+  @ &RSP
   M = 0|D
 ]
 

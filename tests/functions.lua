@@ -47,12 +47,12 @@ end
 function tests.recurse(test)
   test:source [[
     :Recur
-    ~function, 1
+    ~function
     ~popd
     @ :Recur_Zero
     D = D-1 <=
     ~pushd
-    ~call, :Recur, 1
+    ~call, :Recur
     ~jmp, :Recur_End
     :Recur_Zero
     ~pushconst, 99
@@ -60,9 +60,9 @@ function tests.recurse(test)
     ~return
 
     :Init
-    ~stack/init, $1000
+    ~stack/init, $1000,$100
     ~pushconst, 5
-    ~call, :Recur, 1
+    ~call, :Recur
   ]]
 
   test:check_ram(

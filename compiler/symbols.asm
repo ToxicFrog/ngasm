@@ -122,10 +122,10 @@ D = D+M
 ; This is not a parser state; you call it and it does its work and then immediately
 ; calls *sym_next.
   :Sym_Bind ; ( value nameid -- nil )
-~function, 2
+~function
   ; last_sym should already be pointing to the free slot at the end of the symbol
   ; table, so write the nameid to it
-  ~loadarg, 1
+  ~popd
   @ &sym/last
   A = 0|M
   M = 0|D ; *last_sym = D
@@ -133,15 +133,14 @@ D = D+M
   @ &sym/last
   M = M+1
   ; write the value we were given to that slot
-  ~loadarg, 0
+  ~popd
   @ &sym/last
   A = 0|M
   M = 0|D
   ; increment last_sym again so it points to the next, unused slot
   @ &sym/last
   M = M+1
-  ~pushconst, 0
-  ~return
+~return
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Sym_Resolve                                                                ;;
@@ -152,7 +151,7 @@ D = D+M
 ; only argument, and returns the associated value.
 ; If the symbol cannot be resolved it jumps to Error.
   :Sym_Resolve ; ( nameid -- value )
-~function, 0
+~function
   ; Startup code - set this_sym = &symbols
   ~storec, :&symbols., &sym/this
 
@@ -163,7 +162,7 @@ D = D+M
   D = D-M
   ~jz, :Sym_Resolve_Error
   ; Check if the current symbol is the one we're looking for.
-  ~loadarg, 0
+  ~loadstack, 0
   @ &sym/this
   A = 0|M
   D = D-M
@@ -182,6 +181,7 @@ D = D+M
   A = M+1
   D = 0|M
   ; Return the resolved value.
+  ~drop
   ~pushd
   ~return
 
@@ -192,8 +192,7 @@ D = D+M
     :Sym_Resolve_Error
   ~loadd, &core/pass
   ~jnz, :Error
-  ~pushconst, 0
-  ~return
+~return
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Sym_Dump                                                                   ;;
@@ -202,22 +201,28 @@ D = D+M
 ; Called at the end of the program, after successfully writing a ROM image.
 ; Dumps the symbol table to stdout in a debugger-friendly format.
   :Sym_Dump ; ( -- )
-~function, 1 ; one local for the iterator
-  ~pushconst, :&symbols.
-  ~poplocal, 0
+~function ; one local for the iterator
+  ~storec, :&symbols., &sym/this
+
     :Sym_Dump_Iter
   ; this_sym == last_sym? break
-  ~loadlocal, 0
+  @ &sym/this
+  D = 0|M
   @ &sym/last
   D = D-M
   ~jz, :Sym_Dump_Done
   ; else dump next table entry and increment this_sym
-  ~loadlocal, 0
+  @ &sym/this
+  A = 0|M
   D = 0|M
   @ &stdout.words
   M = 0|D
-  @ &LOCALS
-  A = 0|M
+  @ &sym/this
+  AM = M+1
+  D = 0|M
+  @ &stdout.words
+  M = 0|D
+  @ &sym/this
   M = M+1
   ~jmp, :Sym_Dump_Iter
     :Sym_Dump_Done
@@ -228,5 +233,4 @@ D = D+M
   D = M-D
   @ &stdout.words
   M = 0|D
-  ~pushconst, 0  ; dummy return value
 ~return

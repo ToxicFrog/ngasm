@@ -36,7 +36,7 @@
 ; It sets last_sym to point to the start of the symbol table so that we
 ; write symbols to the right place.
   :Init
-~stack/init, $4000
+~stack/init, $4000, $100
 ~storec, :&symbols., &sym/last
 @ &core/line-num  ; initialize line number to 1
 M = 0+1
@@ -282,8 +282,7 @@ M = M+1
   :BindPC
 ~pushvar, &core/pc
 ~pushvar, &sym/name
-~call, :Sym_Bind, 2
-~drop
+~call, :Sym_Bind
 ~jmp, :EndofLine_Continue
 
 ; Called when the line starts with & or #, denoting a constant definition.
@@ -307,8 +306,7 @@ M = M+1
   :LineStart_Constant_Bind
 ~pushvar, &val/value
 ~pushvar, &sym/name
-~call, :Sym_Bind, 2
-~drop
+~call, :Sym_Bind
 ~jmp, :EndOfLine_Continue
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -614,8 +612,7 @@ M = D | M
 ; End of ROM symbol table format is the contents of the symbol table, two words
 ; at a time, followed by a word containing the number of table entries.
   :Finalize
-~call, :Sym_Dump, 0
-~drop
+~call, :Sym_Dump
 ~jmp, :Exit
 
 ; Error state. Write the input line number as a word, then the current pass
