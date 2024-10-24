@@ -42,10 +42,6 @@
 ; this point, we've gone too far.
 &sym/last = $23
 
-; Pointer to the current symbol we are looking at. Used during symbol resolution
-; as scratch space.
-&sym/this = $24
-
 ; The actual table. The table is an array of [symbol_hash, value] pairs
 ; occupying two words each and stored contiguously in memory.
 ; This goes last since it will grow as new symbols are added and we don't want
@@ -152,37 +148,33 @@ D = D+M
 ; If the symbol cannot be resolved it jumps to Error.
   :Sym_Resolve ; ( nameid -- value )
 ~function
-  ; Startup code - set this_sym = &symbols
-  ~storec, :&symbols., &sym/this
+  ~pushconst, :&symbols. ; pointer for scanning symbol table
 
     :Sym_Resolve_Loop
-  ; Are we at the end of the symbol table? If so, error out.
-  ~loadd, &sym/last
-  @ &sym/this
-  D = D-M
-  ~jz, :Sym_Resolve_Error
+  ; Check if we're at the end of the symbol table, and abort if so.
+  ~dup
+  ~pushvar, &sym/last
+  ~eq
+  ~popd
+  ~jnz, :Sym_Resolve_Error
   ; Check if the current symbol is the one we're looking for.
-  ~loadstack, 0
-  @ &sym/this
-  A = 0|M
-  D = D-M
-  ~jz, :Sym_Resolve_Success
-  ; It wasn't :( Advance this_sym by two to point to the next entry, and loop.
-  @ &sym/this
-  M = M+1
-  M = M+1
+  ~dup
+  ~deref ; get the nameid in the current slot
+  ~dupnth, 2 ; get the nameid we're looking for
+  ~eq
+  ~popd
+  ~jnz, :Sym_Resolve_Success
+  ; It wasn't :( advance the pointer to the next entry and retry.
+  ~inctop
+  ~inctop
   ~jmp, :Sym_Resolve_Loop
 
-  ; Called when we successfully find an entry in the symbol table. this_sym holds
-  ; a pointer to the label cell of the entry, so we need to inc it to get the
-  ; value cell.
+  ; Called when we successfully find an entry in the symbol table.
+  ; Top of the stack holds the pointer to the nameid field of the correct slot.
     :Sym_Resolve_Success
-  @ &sym/this
-  A = M+1
-  D = 0|M
-  ; Return the resolved value.
-  ~drop
-  ~pushd
+  ~inctop
+  ~deref
+  ~nip
   ~return
 
   ; Called when we cannot find the requested symbol in the table.
@@ -190,6 +182,7 @@ D = D+M
   ; return 0.
   ; On pass 1, we error out.
     :Sym_Resolve_Error
+  ~drop
   ~loadd, &core/pass
   ~jnz, :Error
 ~return

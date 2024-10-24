@@ -33,7 +33,7 @@
   = 0|D <=>
 ]
 
-; ~loadarg,n ( -- )
+; ~loadstack,n ( -- )
 ; loads the given stack element, numbered 0-indexed from the top, into A and D
 :__MACRO_LOADSTACK
 [loadstack
@@ -42,4 +42,12 @@
   @ &SP
   A = M-D
   AD = 0|M
+]
+
+; ~dupnth,n ( -- x )
+; duplicate the nth element on the stack. ~dup is an optimized version of
+; ~dupnth,0.
+[dupnth
+  ~loadstack, %0
+  ~pushd
 ]
