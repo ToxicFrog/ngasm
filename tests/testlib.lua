@@ -64,7 +64,9 @@ function Test:error(err)
   end
   if err.src then
     table.insert(lines, 'Failing source code:')
-    table.insert(lines, err.src)
+    for _,srcline in ipairs(err.src) do
+      table.insert(lines, srcline)
+    end
   end
   for i=1,#lines do
     lines[i] = '\x1B[1;31m║\x1B[0m '..lines[i]
@@ -83,6 +85,21 @@ end
 function Test:check_error(line, pass)
 end
 
+local function lines_around(src, err)
+  local n = 0
+  local buf = {}
+  for line in src:gmatch('([^\n]*)\n') do
+    n = n+1
+    if n >= err-2 and n <= err+2 then
+      table.insert(buf,
+        string.format('%4s%4d ┊ %s',
+          n == err and '->> ' or '',
+          n, line))
+    end
+  end
+  return buf
+end
+
 function Test:check_valid_rom()
   if self.build_error == nil then
     if #self.rom % 2 == 1 then
@@ -92,9 +109,10 @@ function Test:check_valid_rom()
         line = h * 256 + l;
       }
       self:error {
-        'Build failed on pass %d at line %d',
+        'Build failed on pass %d at line %d (%s)',
         self.build_error.pass, self.build_error.line,
-        src = self.src
+        src = lines_around(self.src, self.build_error.line),
+        (self.build_error.pass == 0) and "syntax error" or "symbol lookup error";
       }
     else
       self.build_error = false
@@ -190,12 +208,13 @@ local function run_test_case_on_cpu(cpu, tests, name, fn)
   fn(test)
   tests.after(test)
   if #test.errors > 0 then
-    printf('\x1B[1;31m FAIL \x1B[0m]\r\x1B[1;31m╓──╼\x1B[0m')
+    printf('\r\x1B[1;31m╓──╼\x1B[0m%-22s [\x1B[1;31m FAIL\x1B[0m %-8s ]\n',
+      name, '('..cpu._name..')')
     -- FIXME: this is all spiders with the new dual-cpu code
     for _,err in ipairs(test.errors) do
       print(err)
     end
-    print('\x1B[1;31m╙──╼\x1B[0m ')
+    -- print('\x1B[1;31m╙   \x1B[0m ')
     return false
   end
   printf('\x1B[1;32m PASS \x1B[0m]')
@@ -239,9 +258,11 @@ local function main(stable_rom, stable_src, next_rom, next_src, ...)
   local stable = vm.new()
   stable:flash(assert(io.open(stable_rom, 'rb')):read('*a'))
   stable.debug:source(stable_src)
+  stable._name = 'stable'
   local next = vm.new()
   next:flash(assert(io.open(next_rom, 'rb')):read('*a'))
   next.debug:source(next_src)
+  next._name = 'devel'
 
   for _,file in ipairs {...} do
     printf('  \x1B[4m%s\x1B[0m\n', file)
