@@ -138,6 +138,13 @@ M = M+1
 ; all the arguments, if any.
   :Macro_Expand_Call
 @ &macros/in-expansion
+MD = M+1
+; If we were'nt already in a macroexpansion, we have to adjust the line number
+; here, since by the time we hit EOL_Continue the macroexpansion flag is set
+; and we skip the line number increment.
+@ +4
+= D-1 <>
+@ &core/line-num
 M = M+1
 ; Advance the macro stack pointer 11 words (10 arguments + return address)
 @ 013

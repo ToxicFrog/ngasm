@@ -141,12 +141,6 @@ M = 0+1
 ; should do whatever cleanup they need to do and then call EndOfLine_Continue.
   :EndOfLine
 ; If we're in a macro, don't increment line number
-~loadd, &macros/in-expansion
-@ :EndOfLine_NoLineNum
-= 0|D <>
-@ &core/line-num
-M = M+1
-  :EndOfLine_NoLineNum
 @ &core/char
 M = 0&D
 @ &core/state
@@ -160,6 +154,11 @@ A = 0|M
 ; In either case it calls NewInstruction afterwards to reset the parser state,
 ; opcode buffer, etc.
   :EndOfLine_Continue
+~loadd, &macros/in-expansion
+@ +4
+= 0|D <>
+@ &core/line-num
+M = M+1
 ; If the opcode is a no-op, skip emitting it entirely and don't increment pc.
 ; TODO: this is a major change in behaviour. Turn it on for stage 6.
 ;~loadd, &core/opcode
