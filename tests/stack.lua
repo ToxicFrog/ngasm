@@ -37,10 +37,13 @@ function tests.dupdrop(test)
     D = D+1
     ~pushd
     ~dup
+    ~pushconst, 66
+    ~pushconst, 77
+    ~nip
   ]]
 
   test:check_ram(
-    0x1000, { 0x4444, 0x4445, 0x4445, 0x4446, 0x4446, 0x0000 }
+    0x1000, { 0x4444, 0x4445, 0x4445, 0x4446, 0x4446, 77, }
   )
 end
 

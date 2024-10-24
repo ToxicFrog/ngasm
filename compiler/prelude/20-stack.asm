@@ -129,6 +129,16 @@
   M = M-1
 ]
 
+; nip ( x y -- y )
+; deletes the value one down from the top. Borrowed from Factor.
+[nip
+  @ &SP
+  AM = M-1
+  D = 0|M
+  A = A-1
+  M = 0|D
+]
+
 ; deref ( ptr -- x )
 ; replaces the top value on the stack with the contents of the memory cell it
 ; points to
