@@ -116,11 +116,10 @@
   @ &SP
   A = M-1
   D = 0|M ; get top of stack value into D
-  @ &SP
-  A = 0|M
+  A = A+1
   M = 0|D ; write to top of stack
   @ &SP
-  M = M+1
+  M = M+1 ; inc sp
 ]
 
 ; drop ( x -- )
@@ -128,4 +127,17 @@
 [drop
   @ &SP
   M = M-1
+]
+
+; deref ( ptr -- x )
+; replaces the top value on the stack with the contents of the memory cell it
+; points to
+[deref
+  @ &SP
+  A = M-1 ; a points to the top of the stack, M is the pointer
+  A = 0|M ; a is the pointer, M is the value
+  D = 0|M ; a is still the pointer, D is the value
+  @ &SP
+  A = M-1
+  M = 0|D
 ]
