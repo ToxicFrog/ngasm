@@ -18,7 +18,7 @@ function tests.push(test)
 
   test:check_ram(
     '&SP', 0x1005,
-    0x1002, { 0x1234, 0x2345, 0x1002, 0x3456, 0x1004, 0x000 }
+    0x1000, { 0x1234, 0x2345, 0x1002, 0x3456, 0x1004, 0x0000 }
   )
 end
 
@@ -40,7 +40,7 @@ function tests.dupdrop(test)
   ]]
 
   test:check_ram(
-    0x1002, { 0x4444, 0x4445, 0x4445, 0x4446, 0x4446, 0x0000 }
+    0x1000, { 0x4444, 0x4445, 0x4445, 0x4446, 0x4446, 0x0000 }
   )
 end
 
@@ -119,7 +119,7 @@ function tests.math(test)
 
   test:check_ram(
     '&SP', 0x1004,
-    0x1004, { 451+85, 451-85, 13, 11 }
+    0x1000, { 451+85, 451-85, 13, 11 }
   )
 end
 
@@ -141,6 +141,6 @@ function tests.logic(test)
 
   test:check_ram(
     '&SP', 0x1004,
-    0x1004, { 1, 0, 0, 1 }
+    0x1000, { 1, 0, 0, 1 }
   )
 end

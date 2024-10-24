@@ -4,31 +4,31 @@ local tests = ...
 function tests.call1(test)
   test:source [[
     :Return_Five
-    ~function, 0
-    ~pushconst, 5
+    ~function
+      ~pushconst, 5
     ~return
 
     :Init
-    ~stack/init, $1000
-    ~call, :Return_Five, 0
+    ~stack/init, $1000, $100
+    ~call, :Return_Five
   ]]
 
   test:check_ram(
     '&SP', 0x1001,
-    0x1001, { 5 }
+    0x1000, { 5 }
   )
 end
 
 function tests.add(test)
   test:source [[
     :Add
-    ~function, 2
-    ~popd
-    @ &SP
-    A = M-1
-    D = D+M
-    ~drop
-    ~pushd
+    ~function
+      ~popd
+      @ &SP
+      A = M-1
+      D = D+M
+      ~drop
+      ~pushd
     ~return
 
     :Init
@@ -40,7 +40,7 @@ function tests.add(test)
 
   test:check_ram(
     '&SP', 0x1001,
-    0x1001, { 0x3355 }
+    0x1000, { 0x3355 }
   )
 end
 
@@ -48,15 +48,15 @@ function tests.recurse(test)
   test:source [[
     :Recur
     ~function
-    ~popd
-    @ :Recur_Zero
-    D = D-1 <=
-    ~pushd
-    ~call, :Recur
-    ~jmp, :Recur_End
-    :Recur_Zero
-    ~pushconst, 99
-    :Recur_End
+      ~popd
+      @ :Recur_Zero
+      D = D-1 <=
+      ~pushd
+      ~call, :Recur
+      ~jmp, :Recur_End
+      :Recur_Zero
+      ~pushconst, 99
+      :Recur_End
     ~return
 
     :Init
@@ -67,6 +67,6 @@ function tests.recurse(test)
 
   test:check_ram(
     '&SP', 0x1001,
-    0x1001, { 99 }
+    0x1000, { 99 }
   )
 end

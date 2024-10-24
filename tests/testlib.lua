@@ -7,10 +7,12 @@ local function printf(...)
   io.stdout:flush()
 end
 
-local function rom_str(bin)
+local function rom_str(bin, start, size)
   local buf = {}
-  for i=1,#bin,2 do
-    local h,l = bin:byte(i, i+1)
+  start = start or 1
+  size = size or math.min(#bin, 16)
+  for i=1,size,2 do
+    local h,l = bin:byte(start+i-1, start+i)
     table.insert(buf, string.format('%04X', h*256 + l))
   end
   return table.concat(buf, ' ')
@@ -18,7 +20,7 @@ end
 
 local function ram_str(ram, start, size)
   start = start or 1
-  size = #ram
+  size = size or math.min(#ram, 16)
   local buf = {}
   for i=start,start+size-1 do
     table.insert(buf, string.format('%04X', ram[i] or 0))
@@ -59,8 +61,10 @@ function Test:error(err)
   local lines = {}
   table.insert(lines, string.format(unpack(err)))
   if err.expected then
-    table.insert(lines, string.format('%9s: %s', 'Expected', rom_str(err.expected)))
-    table.insert(lines, string.format('%9s: %s', 'Got', rom_str(err.actual)))
+    table.insert(lines, string.format('%9s: %s', 'Expected', err.expected))
+  end
+  if err.actual then
+    table.insert(lines, string.format('%9s: %s', 'Got', err.actual))
   end
   if err.src then
     table.insert(lines, 'Failing source code:')
@@ -130,7 +134,7 @@ function Test:check_rom(addr, value, ...)
     local bin = vmutil.hex2bin(addr)
     self:error_if(bin ~= self.rom) {
       'Emitted ROM does not match expected image:';
-      expected = bin, actual = self.rom;
+      expected = rom_str(bin), actual = rom_str(self.rom);
     }
     return self:check_rom(value, ...)
   elseif addr == '*' then
@@ -138,7 +142,7 @@ function Test:check_rom(addr, value, ...)
     local bin = vmutil.hex2bin(value)
     self:error_if(not self.rom:match(bin, 1, true)) {
       'Emitted ROM does not contain expected code:';
-      expected = bin, actual = self.rom;
+      expected = rom_str(bin), -- actual = self.rom;
     }
     return self:check_rom(...)
   else
@@ -147,7 +151,7 @@ function Test:check_rom(addr, value, ...)
     local bin = vmutil.hex2bin(value)
     self:error_if(self.rom:match(bin, addr, true) ~= addr) {
       'Emitted ROM does not contain expected code at address $%04X:', addr;
-      expected = bin, actual = self.rom:sub(addr, addr+#bin-1);
+      expected = rom_str(bin), actual = rom_str(self.rom, addr, #bin);
     }
     return self:check_rom(...)
   end
@@ -187,11 +191,11 @@ function Test:check_ram(addr, value, ...)
       self.cpu.ram[true_addr], value
     }
   elseif type(value) == 'table' then
-    self.error_if(diff_region(self.cpu.ram, true_addr, value)) {
+    self:error_if(diff_region(self.cpu.ram, true_addr, value)) {
       'RAM at address $%04X%s does not match expected values',
       true_addr, addr ~= true_addr and ' ('..addr..')' or '';
       expected = ram_str(value);
-      got = ram_str(self.cpu.ram, true_addr, #value);
+      actual = ram_str(self.cpu.ram, true_addr, #value);
     }
   else
     -- TODO: automatic string to ram conversion

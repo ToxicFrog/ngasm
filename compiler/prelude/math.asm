@@ -18,7 +18,7 @@
   ~popd
   ~popa
   D = A-D
-  ~pusha
+  ~pushd
 ]
 
 ; inctop ( x -- x' )
@@ -34,7 +34,7 @@
 [dectop
   @ &SP
   A = M-1
-  M = M+1
+  M = M-1
 ]
 
 ; tobool ( x -- ? )
