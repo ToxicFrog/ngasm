@@ -57,10 +57,17 @@ function vm:flash(rom)
   else
     self.rom = vmutil.string_to_words(rom)
   end
+  self:fill_icache()
   self.rom.size = #self.rom+1
-  self.icache = {}
   self.debug:reset()
   return self
+end
+
+function vm:fill_icache()
+  self.icache = {}
+  for i=0,#self.rom do
+    self.icache[i] = vmutil.decode(self.rom[i])
+  end
 end
 
 -- Run n steps of the VM. If n is omitted, run until program completion.
@@ -70,9 +77,6 @@ end
 
 -- Decode a single instruction, from icache if possible.
 function vm:decode(addr)
-  if not self.icache[addr] then
-    self.icache[addr] = vmutil.decode(self.rom[addr])
-  end
   return self.icache[addr]
 end
 
