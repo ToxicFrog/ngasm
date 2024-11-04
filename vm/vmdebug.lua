@@ -45,7 +45,7 @@ local function bind(self, id, name, line)
   for _,sym in ipairs(self.symbols) do
     if sym.id == id then
       if sym.name then
-        print(string.format("WARNING: id %d used for both %s (at line %d) and %s (at line %d)",
+        error(string.format("WARNING: id %d used for both %s (at line %d) and %s (at line %d)",
           id, sym.name, sym.line or -1, name, line or -1))
       end
       sym.name = name
