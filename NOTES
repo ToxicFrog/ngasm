@@ -1,14 +1,50 @@
-$4000   036a ; symbol value
-$4001   05ca ; nameid
-$4002   old args
-$4003   old locals
-$4004   ra
-$4005   <empty> <- locals
-$4006   <empty>
-$4007   <- sp
+# compilation model once it's a forth
 
-$0AEE   05Ca  nameid  <- :&symbols.
-$0AEF   036a  fp offset
+when reading stuff at the top level:
+- read a token
+- if it's a literal, emit code to push it
+- if it's a symbol, look up its head
+  - if marked INLINE (used for asm, constants, variable accessors), tail is an
+    instruction sequence; emit it
+    - open question: how do we handle relative jumps in inline code? placeholders
+      using invalid ops?
+  - otherwise, tail is a ROM address, emit instructions to call it
+  - emitting code also increments PC so we know how to address things
+
+when reading code blocks:
+- when entering the block, create an anonymous entry in the dictionary for it,
+  and push a pointer to that entry followed by a marker (we can use an invalid
+  opcode for the latter)
+- when "emitting" code, we leave pc alone and push it onto the stack instead
+- when reaching the end of the block:
+  - scan back to the marker
+  - grab the head pointer from below it
+    - if inline: copy all instructions on the stack into the tail
+    - else: write PC into the head, then emit all instructions on the stack for
+      real and drop them, along with the marker
+  ...it's probably easier if we make things a bit less pure, and put the name of
+  the function at the start of the block when creating named functions, because
+  then we can encode that into the head before pushing it; this also means we can
+  set inline/asm at the start and rather than pushing onto the stack we dump them
+  straight into the tail. <- won't work with nested inlines, hmmm, maybe we just
+  disallow those entirely? Only top-level functions can be asm or inline?
+
+Ideally we want something like this:
+  0 [ 1 ] [ 2 ] if
+to emit a ROM that looks like:
+  jmp :__main__
+  :<anonymous1>
+  pushconst 1
+  return
+  :<anonymous2>
+  pushconst 2
+  return
+  :__main__
+  pushconst 0
+  pushconst :<anonymous1>
+  pushconst :<anonymous2>
+  call :if
+
 
 ;; pre/post increment
 postincrement has faster pop, preincrement has faster push
